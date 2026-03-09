@@ -223,7 +223,7 @@ function CreateExperimentModal({ defaultEnvId, onClose, onCreated }: { defaultEn
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Key</label>
-            <input value={key} onChange={(e) => setKey(e.target.value)} required className="input" placeholder="button_color_test" />
+            <input value={key} onChange={(e) => setKey(e.target.value)} required className="input" placeholder="checkout_button_experiment" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -237,7 +237,7 @@ function CreateExperimentModal({ defaultEnvId, onClose, onCreated }: { defaultEn
                 <div key={i} className="flex gap-2 items-center">
                   <input
                     value={v.key} onChange={(e) => setVariantKey(i, e.target.value)} required
-                    className="input flex-1" placeholder="variant key"
+                    className="input flex-1" placeholder="variant name (e.g. control)"
                   />
                   <input
                     type="number" min="0" max="100" value={v.weight}

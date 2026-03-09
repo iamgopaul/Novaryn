@@ -185,13 +185,13 @@ export default function KeysPage() {
 
 const ct = new Novaryn({
   host: "http://localhost:3000",
-  project: "${projMap.get(keys[0]?.projectId ?? "") ?? "my-project"}",
+  project: "${projMap.get(keys[0]?.projectId ?? "") ?? "core-platform"}",
   env: "prod",
 });
 
 // With SDK key auth
 const flags = await ct.evaluate("user_123", ["dark_mode", "new_onboarding"], {
-  apiKey: "${keys[0]?.prefix ?? "ct_..."}••••",
+  apiKey: "${keys[0]?.prefix ?? "ct_live_"}••••",
 });`}
           </pre>
         </div>
@@ -254,7 +254,7 @@ function CreateKeyModal({ projects, onClose, onCreated }: {
           <div>
             <label className="block text-xs text-gray-400 mb-1">Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} required
-              className="input" placeholder="Production iOS app" />
+              className="input" placeholder="Production Web Application" />
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Project</label>

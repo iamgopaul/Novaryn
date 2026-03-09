@@ -145,7 +145,7 @@ function RequestReset() {
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             className="input w-full"
-            placeholder="iamgopaul / you@example.com"
+            placeholder="username or work.email@company.com"
             autoFocus
           />
         </div>

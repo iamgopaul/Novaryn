@@ -346,7 +346,7 @@ function NewProjectModal({ onClose, onCreated, setError }: {
         <div>
           <label className="block text-xs text-gray-400 mb-1">Project name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} required
-            className="input" placeholder="my-app" autoFocus />
+            className="input" placeholder="Core Platform" autoFocus />
         </div>
         <ModalButtons onClose={onClose} loading={loading} label="Create Project" />
       </form>
@@ -379,7 +379,7 @@ function NewEnvModal({ projectId, onClose, onCreated, setError }: {
         <div>
           <label className="block text-xs text-gray-400 mb-1">Environment name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} required
-            className="input" placeholder="dev / staging / prod" autoFocus />
+            className="input" placeholder="production / staging / development" autoFocus />
           <p className="text-xs text-gray-600 mt-1">Use short names like dev, staging, prod.</p>
         </div>
         <ModalButtons onClose={onClose} loading={loading} label="Create Environment" />
@@ -445,7 +445,7 @@ function ProjectInviteModal({ projects, selectedProjectId, onClose, onInvited }:
               value={query}
               onChange={(e) => setQuery(e.target.value.toLowerCase())}
               className="input flex-1"
-              placeholder="Search @username"
+              placeholder="Search by username"
               autoFocus
             />
             <button type="button" onClick={searchUsers} className="text-xs border border-gray-700 hover:bg-gray-800 px-3 rounded">

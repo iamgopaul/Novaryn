@@ -279,7 +279,7 @@ function TestPanel({ flag }: { flag: Flag }) {
       <div>
         <label className="block text-xs text-gray-400 mb-1">User ID</label>
         <div className="flex gap-1">
-          <input value={userId} onChange={(e) => setUserId(e.target.value)} className="input text-xs flex-1" placeholder="user_123" />
+          <input value={userId} onChange={(e) => setUserId(e.target.value)} className="input text-xs flex-1" placeholder="customer_001" />
           <button onClick={test} disabled={loading || !selectedEnv}
             className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs px-3 rounded font-medium">
             {loading ? "…" : "Run"}
@@ -365,7 +365,7 @@ function AddRuleForm({ flagKey, onAdded }: { flagKey: string; onAdded: (r: FlagR
       )}
       {type === "allowlist" && (
         <input value={userIds} onChange={(e) => setUserIds(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-100" placeholder="user1, user2, ..." />
+          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-100" placeholder="customer_001, customer_002" />
       )}
       <input type="number" min="0" value={priority} onChange={(e) => setPriority(e.target.value)}
         className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-100" placeholder="Priority (0 = highest)" />
@@ -409,7 +409,7 @@ function CreateFlagModal({ envId, onClose, onCreated }: {
         <form onSubmit={submit} className="space-y-3">
           <div>
             <label className="block text-xs text-gray-400 mb-1">Key</label>
-            <input value={key} onChange={(e) => setKey(e.target.value)} required className="input" placeholder="my_feature" autoFocus />
+            <input value={key} onChange={(e) => setKey(e.target.value)} required className="input" placeholder="feature_access_control" autoFocus />
           </div>
           <div>
             <label className="block text-xs text-gray-400 mb-1">Type</label>

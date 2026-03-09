@@ -121,7 +121,7 @@ export default function RegisterPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
             className="input w-full"
-            placeholder="jane_smith"
+            placeholder="first_last"
             autoFocus
           />
           <p className="text-xs text-gray-600 mt-1">Letters, numbers, underscore (3-32 chars).</p>
@@ -134,7 +134,7 @@ export default function RegisterPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="input w-full"
-            placeholder="Jane Smith"
+            placeholder="Alex Johnson"
           />
         </div>
         <div>
@@ -145,7 +145,7 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="input w-full"
-            placeholder="you@example.com"
+            placeholder="work.email@company.com"
           />
         </div>
         <div>
