@@ -1,6 +1,17 @@
 import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { AuthContext, type AuthUser, type LoginResult, type RegisterRequestResult } from "./AuthContext";
 
+async function readJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  if (!text) return {} as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    const preview = text.replace(/\s+/g, " ").slice(0, 180);
+    throw new Error(`API returned non-JSON response (status ${res.status}): ${preview}`);
+  }
+}
+
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -10,11 +21,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch("/auth/me", { credentials: "include", signal });
       if (!res.ok) { setUser(null); return; }
-      const data = await res.json() as { user: AuthUser | null; needsSetup: boolean };
+      const data = await readJsonResponse<{ user: AuthUser | null; needsSetup: boolean }>(res);
       setUser(data.user);
       setNeedsSetup(data.needsSetup);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
+      if (err instanceof Error) console.error("Auth refresh failed:", err.message);
       setUser(null);
     }
   }, []);
@@ -35,7 +47,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identifier, password, channel }),
     });
-    const data = await res.json() as (AuthUser & { error?: string }) | (LoginResult & { error?: string });
+    const data = await readJsonResponse<(AuthUser & { error?: string }) | (LoginResult & { error?: string })>(res);
     if (!res.ok) throw new Error(data.error ?? "Login failed");
     if ((data as LoginResult).requiresTwoFactor) {
       return data as LoginResult;
@@ -52,7 +64,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ challengeId, channel }),
     });
-    const data = await res.json() as { destination: string; devCode?: string; error?: string };
+    const data = await readJsonResponse<{ destination: string; devCode?: string; error?: string }>(res);
     if (!res.ok) throw new Error(data.error ?? "Failed to send verification code");
     return { destination: data.destination, devCode: data.devCode };
   }
@@ -64,7 +76,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ challengeId, code }),
     });
-    const data = await res.json() as AuthUser & { error?: string };
+    const data = await readJsonResponse<AuthUser & { error?: string }>(res);
     if (!res.ok) throw new Error(data.error ?? "2FA verification failed");
     setUser(data);
     setNeedsSetup(false);
@@ -82,7 +94,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, name, password }),
     });
-    const data = await res.json() as RegisterRequestResult & { error?: string };
+    const data = await readJsonResponse<RegisterRequestResult & { error?: string }>(res);
     if (!res.ok) throw new Error(data.error ?? "Registration request failed");
     return data;
   }
@@ -94,7 +106,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ challengeId, code }),
     });
-    const data = await res.json() as AuthUser & { error?: string };
+    const data = await readJsonResponse<AuthUser & { error?: string }>(res);
     if (!res.ok) throw new Error(data.error ?? "Registration confirmation failed");
     setUser(data);
     setNeedsSetup(false);
