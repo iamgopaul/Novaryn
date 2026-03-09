@@ -1,0 +1,1 @@
+ALTER TABLE "sdk_keys" ADD COLUMN "key_plain" text;

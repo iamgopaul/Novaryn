@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1773031131181,
+      "tag": "0000_clever_scarlet_witch",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773040306582,
+      "tag": "0001_slim_the_enforcers",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773043796544,
+      "tag": "0002_brainy_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1741478400000,
+      "tag": "0003_add_auth",
+      "breakpoints": true
+    }
+  ]
+}
