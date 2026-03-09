@@ -1,7 +1,7 @@
 {
   "installCommand": "bun install && cd frontend && bun install",
-  "buildCommand": "bun --cwd frontend run build",
-  "outputDirectory": "frontend/dist",
+  "buildCommand": "cd frontend && bun run build && cd .. && rm -rf dist && cp -R frontend/dist dist",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
     { "source": "/admin/:path*", "destination": "/api/admin/:path*" },
