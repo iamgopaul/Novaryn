@@ -8,7 +8,14 @@ export default async function handler(req: any, res: any): Promise<void> {
   const method = req.method ?? "GET";
   const proto = req.headers["x-forwarded-proto"] ?? "https";
   const host = req.headers.host ?? "localhost";
-  const url = `${proto}://${host}${req.url ?? "/"}`;
+  const rawPath = req.url ?? "/";
+  const parsed = new URL(`${proto}://${host}${rawPath}`);
+  const normalizedPath = parsed.pathname.startsWith("/api/")
+    ? parsed.pathname.replace(/^\/api/, "")
+    : parsed.pathname === "/api"
+      ? "/"
+      : parsed.pathname;
+  const url = `${proto}://${host}${normalizedPath}${parsed.search}`;
 
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers ?? {})) {
