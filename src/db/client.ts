@@ -16,7 +16,11 @@ const dbUnavailable = new Proxy({}, {
 let queryClient: ReturnType<typeof postgres> | null = null;
 if (connectionString) {
 	try {
-		queryClient = postgres(connectionString);
+		queryClient = postgres(connectionString, {
+			max: 5,
+			connect_timeout: 5,
+			idle_timeout: 20,
+		});
 	} catch (error) {
 		console.error("DATABASE_URL failed to initialize postgres client", error);
 		queryClient = null;
