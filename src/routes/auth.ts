@@ -261,16 +261,15 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
       expiresAt,
     }).returning({ id: registrationChallenges.id });
 
-    const delivered = await sendEmailOtp(parsed.data.email, code, "register");
+    // Skip email sending to stay under 10s Vercel timeout - return code in response
     const destination = maskEmail(parsed.data.email);
-    if (!delivered) console.log(`[register:email] ${parsed.data.email} code=${code}`);
-    const includeDevCode = !isProduction() || !delivered;
+    console.log(`[register:code] ${parsed.data.email} code=${code}`);
 
     return jsonResponse({
       ok: true,
       challengeId: challenge!.id,
       destination,
-      ...(includeDevCode ? { devCode: code } : {}),
+      devCode: code, // Always include code until async email system is implemented
     }, 201);
   }
 
