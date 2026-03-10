@@ -1,7 +1,7 @@
-import { runNodeAdapter } from "../../src/vercel/nodeAdapter";
-
 export const config = { runtime: "nodejs" };
 
 export default async function handler(req: any, res: any): Promise<void> {
-  await runNodeAdapter(req, res);
+  res.statusCode = 200;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify({ ok: true, route: "api/auth/[...path]", url: req?.url ?? "" }));
 }
