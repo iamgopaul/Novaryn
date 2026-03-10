@@ -1,0 +1,16 @@
+{
+  "installCommand": "bun install",
+  "buildCommand": "bun run bundle:api",
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
+    { "source": "/admin/:path*", "destination": "/api/admin/:path*" },
+    { "source": "/evaluate", "destination": "/api/evaluate" },
+    { "source": "/stream", "destination": "/api/stream" },
+    { "source": "/health", "destination": "/api/health" }
+  ]
+}
