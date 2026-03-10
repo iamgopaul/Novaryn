@@ -34,14 +34,45 @@ export async function runNodeAdapter(req: any, res: any): Promise<void> {
     }
 
     const body = await new Promise<Buffer>((resolve) => {
+      if (method === "GET" || method === "HEAD") {
+        resolve(Buffer.alloc(0));
+        return;
+      }
+
+      if (req?.body !== undefined && req?.body !== null) {
+        if (Buffer.isBuffer(req.body)) {
+          resolve(req.body);
+          return;
+        }
+        if (typeof req.body === "string") {
+          resolve(Buffer.from(req.body));
+          return;
+        }
+        resolve(Buffer.from(JSON.stringify(req.body)));
+        return;
+      }
+
       if (typeof req?.on !== "function") {
         resolve(Buffer.alloc(0));
         return;
       }
+
+      if (req.readableEnded) {
+        resolve(Buffer.alloc(0));
+        return;
+      }
+
       const chunks: Buffer[] = [];
+      const timeout = setTimeout(() => resolve(Buffer.concat(chunks)), 5000);
       req.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
-      req.on("end", () => resolve(Buffer.concat(chunks)));
-      req.on("error", () => resolve(Buffer.alloc(0)));
+      req.on("end", () => {
+        clearTimeout(timeout);
+        resolve(Buffer.concat(chunks));
+      });
+      req.on("error", () => {
+        clearTimeout(timeout);
+        resolve(Buffer.alloc(0));
+      });
     });
 
     const request = new Request(url, {
