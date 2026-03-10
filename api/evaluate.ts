@@ -1,4 +1,4 @@
-import { runNodeAdapter } from "./_lib/vercel/nodeAdapter";
+import { runNodeAdapter } from "./adapter.mjs";
 
 export const config = { runtime: "nodejs" };
 

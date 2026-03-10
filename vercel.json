@@ -1,6 +1,6 @@
 {
   "installCommand": "bun install && cd frontend && bun install",
-  "buildCommand": "cd frontend && bun run build && cd .. && rm -rf dist && cp -R frontend/dist dist && rm -rf api/_lib && cp -r src api/_lib",
+  "buildCommand": "cd frontend && bun run build && cd .. && rm -rf dist && cp -R frontend/dist dist && bun run bundle:api",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
