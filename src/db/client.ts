@@ -24,7 +24,7 @@ if (connectionString) {
 			max: 1,
 			idle_timeout: false,
 			max_lifetime: false,
-			connect_timeout: 10,
+			connect_timeout: 3,
 			prepare: false,
 		});
 		console.log("[DB] postgres-js client configured");
