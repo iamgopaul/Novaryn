@@ -2,12 +2,14 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL;
+// Try unpooled first (recommended for serverless), fall back to pooled
+const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 if (!connectionString) {
-	console.error("DATABASE_URL is not set");
+	console.error("DATABASE_URL and DATABASE_URL_UNPOOLED are not set");
 } else {
 	const hostname = new URL(connectionString).hostname;
-	console.log(`[DB] Using connection: ${hostname}`);
+	const isUnpooled = !connectionString.includes("-pooler.");
+	console.log(`[DB] Using ${isUnpooled ? "unpooled" : "pooled"} connection: ${hostname}`);
 }
 
 const dbUnavailable = new Proxy({}, {
