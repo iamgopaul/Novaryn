@@ -259,6 +259,23 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     return jsonResponse({ dbWriteWorks: true, durationMs: duration });
   }
 
+  // DEBUG: Test password hashing (CPU-intensive)
+  if (sub === "hashtest" && method === "POST") {
+    const start = Date.now();
+    const hash = await hashPassword("TestPassword123!");
+    const hashDuration = Date.now() - start;
+    const verifyStart = Date.now();
+    const valid = await verifyPassword("TestPassword123!", hash);
+    const verifyDuration = Date.now() - verifyStart;
+    return jsonResponse({ 
+      hashWorks: true, 
+      hashDurationMs: hashDuration,
+      verifyDurationMs: verifyDuration,
+      totalMs: hashDuration + verifyDuration,
+      valid,
+    });
+  }
+
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
