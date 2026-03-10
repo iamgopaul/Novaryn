@@ -1,0 +1,3 @@
+{
+  "ignoreCommand": "echo 'Root deploy disabled. Set Vercel Root Directory to Novaryn Hub or Services/Novaryn Control Tower.' && exit 0"
+}
