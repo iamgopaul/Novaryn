@@ -64,11 +64,18 @@ function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boo
 }
 
 function AppInner() {
+  const { user } = useAuth();
   const initialState = parseAppPath(window.location.pathname);
   const [hubTab, setHubTabState] = useState<HubTab>(initialState.hubTab);
   const [showControlTower, setShowControlTower] = useState(initialState.showControlTower);
   const [controlTowerTab, setControlTowerTabState] = useState<ControlTowerTab>(initialState.controlTowerTab);
   const { projects, selectedProject, setSelectedProject, envsForProject, selectedEnv, setSelectedEnv } = useEnv();
+  const [tinyLinkBaseUrl, setTinyLinkBaseUrl] = useState(() => window.localStorage.getItem("tinylinkBaseUrl") ?? "http://localhost:3000");
+  const [tinyLinkUrl, setTinyLinkUrl] = useState("");
+  const [tinyLinkSlug, setTinyLinkSlug] = useState("");
+  const [tinyLinkLoading, setTinyLinkLoading] = useState(false);
+  const [tinyLinkError, setTinyLinkError] = useState("");
+  const [tinyLinkCreated, setTinyLinkCreated] = useState<{ shortUrl: string; slug: string; originalUrl: string } | null>(null);
 
   const setHubTab = (next: HubTab) => {
     const path = next === "home" ? "/novaryn" : `/${next}`;
@@ -109,6 +116,62 @@ function AppInner() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("tinylinkBaseUrl", tinyLinkBaseUrl);
+  }, [tinyLinkBaseUrl]);
+
+  async function createTinyLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tinyLinkUrl.trim()) {
+      setTinyLinkError("Enter a URL to shorten.");
+      return;
+    }
+
+    if (!user?.id) {
+      setTinyLinkError("You must be signed in to create TinyLinks.");
+      return;
+    }
+
+    setTinyLinkLoading(true);
+    setTinyLinkError("");
+    setTinyLinkCreated(null);
+
+    const base = tinyLinkBaseUrl.trim().replace(/\/+$/, "");
+    try {
+      const res = await fetch(`${base}/links`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-TinyLink-User-Id": user?.id ?? "",
+        },
+        body: JSON.stringify({
+          url: tinyLinkUrl.trim(),
+          slug: tinyLinkSlug.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json() as {
+        slug?: string;
+        shortUrl?: string;
+        originalUrl?: string;
+        error?: string;
+      };
+
+      if (!res.ok) throw new Error(data.error ?? "Failed to create TinyLink");
+      if (!data.slug || !data.shortUrl || !data.originalUrl) throw new Error("TinyLink response was incomplete.");
+
+      setTinyLinkCreated({
+        slug: data.slug,
+        shortUrl: data.shortUrl,
+        originalUrl: data.originalUrl,
+      });
+    } catch (err) {
+      setTinyLinkError((err as Error).message || "Failed to reach TinyLink service.");
+    } finally {
+      setTinyLinkLoading(false);
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -290,9 +353,77 @@ function AppInner() {
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500">
-                Local default URL: <span className="font-mono text-gray-400">http://localhost:3000</span>
-              </p>
+              <form onSubmit={createTinyLink} className="border border-gray-800 rounded-md p-3 bg-gray-950/40 space-y-3">
+                <p className="text-xs text-gray-500">Use TinyLink from inside Novaryn</p>
+                <p className="text-[11px] text-cyan-300/80">Links created here are scoped to your account only.</p>
+
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">TinyLink Base URL</label>
+                  <input
+                    value={tinyLinkBaseUrl}
+                    onChange={(event) => setTinyLinkBaseUrl(event.target.value)}
+                    className="input"
+                    placeholder="http://localhost:3000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">URL to shorten</label>
+                  <input
+                    value={tinyLinkUrl}
+                    onChange={(event) => setTinyLinkUrl(event.target.value)}
+                    className="input"
+                    placeholder="https://example.com/very/long/url"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Custom slug (optional)</label>
+                  <input
+                    value={tinyLinkSlug}
+                    onChange={(event) => setTinyLinkSlug(event.target.value)}
+                    className="input"
+                    placeholder="my-custom-slug"
+                  />
+                </div>
+
+                {tinyLinkError && <p className="text-xs text-red-400">{tinyLinkError}</p>}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="submit"
+                    disabled={tinyLinkLoading}
+                    className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-2 rounded font-medium"
+                  >
+                    {tinyLinkLoading ? "Creating…" : "Create TinyLink"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const base = tinyLinkBaseUrl.trim().replace(/\/+$/, "");
+                      const query = user?.id ? `?userId=${encodeURIComponent(user.id)}` : "";
+                      window.open(`${base}/${query}`, "_blank", "noopener,noreferrer");
+                    }}
+                    className="text-xs border border-gray-700 hover:bg-gray-800 text-gray-300 px-3 py-2 rounded font-medium"
+                  >
+                    Open TinyLink App
+                  </button>
+                </div>
+
+                {tinyLinkCreated && (
+                  <div className="mt-2 border border-cyan-800/70 bg-cyan-950/20 rounded px-3 py-2">
+                    <p className="text-xs text-cyan-300 mb-1">Short link created</p>
+                    <a
+                      href={tinyLinkCreated.shortUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-cyan-200 underline break-all"
+                    >
+                      {tinyLinkCreated.shortUrl}
+                    </a>
+                  </div>
+                )}
+              </form>
             </div>
           </div>
         )}
