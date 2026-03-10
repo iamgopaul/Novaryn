@@ -2,16 +2,18 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL;
+// Use direct connection (unpooled) for Neon HTTP driver in serverless
+// Pooled connections have network restrictions in serverless environments
+const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 if (!connectionString) {
-	console.error("[DB] DATABASE_URL is not set");
+	console.error("[DB] DATABASE_URL_UNPOOLED and DATABASE_URL are not set");
 } else {
 	try {
 		const hostname = new URL(connectionString).hostname;
-		const isPooled = connectionString.includes("-pooler.");
-		console.log(`[DB] Using ${isPooled ? "pooled" : "unpooled"} connection: ${hostname}`);
+		const isUnpooled = !connectionString.includes("-pooler.");
+		console.log(`[DB] Using ${isUnpooled ? "direct" : "pooled"} connection: ${hostname}`);
 	} catch (e) {
-		console.error("[DB] Failed to parse DATABASE_URL");
+		console.error("[DB] Failed to parse connection string");
 	}
 }
 
@@ -24,24 +26,16 @@ const dbUnavailable = new Proxy({}, {
 let queryClient: ReturnType<typeof neon> | null = null;
 if (connectionString) {
 	try {
-		// Use Neon HTTP driver for serverless compatibility
-		// Note: Complex queries (or/ilike) must be rewritten as sequential queries
-		queryClient = neon(connectionString, {
-			fetchOptions: {
-				cache: 'no-store',
-			},
-		});
-		console.log("[DB] Neon client initialized successfully");
+		console.log("[DB] Initializing Neon HTTP client...");
+		// Direct connection is required for serverless - pooler has network restrictions
+		queryClient = neon(connectionString);
+		console.log("[DB] Neon HTTP client initialized successfully");
 	} catch (error) {
-		console.error("[DB] Failed to initialize neon client:", error);
-		console.error("[DB] Error details:", {
-			message: (error as Error)?.message,
-			stack: (error as Error)?.stack,
-		});
+		console.error("[DB] Failed to initialize Neon client:", error);
 		queryClient = null;
 	}
 } else {
-	console.error("[DB] CONNECTION STRING IS EMPTY - USING FALLBACK");
+	console.error("[DB] CONNECTION STRING IS EMPTY");
 }
 
 export const db = queryClient
