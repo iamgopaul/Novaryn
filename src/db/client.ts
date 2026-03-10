@@ -1,49 +1,38 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
-// Use direct connection (unpooled) for Neon HTTP driver in serverless
-// Pooled connections have network restrictions in serverless environments
-const connUrlUnpooled = process.env.DATABASE_URL_UNPOOLED;
-const connUrlPooled = process.env.DATABASE_URL;
-const connectionString = connUrlUnpooled || connUrlPooled;
-
-console.log("[DB] Environment check:");
-console.log(`[DB] DATABASE_URL_UNPOOLED set: ${!!connUrlUnpooled}`);
-console.log(`[DB] DATABASE_URL set: ${!!connUrlPooled}`);
-console.log(`[DB] Using: ${connUrlUnpooled ? "unpooled" : "pooled"}`);
+// Use postgres-js for TCP connections (works in Vercel serverless)
+// Neon HTTP driver has fetch restrictions in serverless environment
+const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-	console.error("[DB] CRITICAL: No connection string available!");
-} else {
-	try {
-		const url = new URL(connectionString);
-		console.log(`[DB] Connection host: ${url.hostname}`);
-		console.log(`[DB] Connection database: ${url.pathname}`);
-	} catch (e) {
-		console.error("[DB] Failed to parse connection string:", (e as Error).message);
-	}
+	console.error("[DB] DATABASE_URL not set");
 }
 
 const dbUnavailable = new Proxy({}, {
 	get() {
-		throw new Error("DATABASE_URL is missing or invalid");
+		throw new Error("DATABASE_URL is not configured");
 	},
 });
 
-let queryClient: ReturnType<typeof neon> | null = null;
+let queryClient: ReturnType<typeof postgres> | null = null;
+
 if (connectionString) {
 	try {
-		console.log("[DB] Initializing Neon HTTP client...");
-		// Direct connection is required for serverless - pooler has network restrictions
-		queryClient = neon(connectionString);
-		console.log("[DB] Neon HTTP client initialized successfully");
+		console.log("[DB] Creating postgres-js client with connection pooling...");
+		// Serverless-optimized connection pool
+		queryClient = postgres(connectionString, {
+			max: 5,  // Limit connections in serverless
+			connect_timeout: 10,
+			idle_timeout: 30,
+			application_name: 'controltower',
+		});
+		console.log("[DB] postgres-js client created");
 	} catch (error) {
-		console.error("[DB] Failed to initialize Neon client:", error);
+		console.error("[DB] Failed to create postgres client:", (error as Error)?.message);
 		queryClient = null;
 	}
-} else {
-	console.error("[DB] CONNECTION STRING IS EMPTY");
 }
 
 export const db = queryClient
