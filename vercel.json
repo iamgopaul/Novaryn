@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd 'Novaryn Hub' && bun install && bun run build",
-  "outputDirectory": "Novaryn Hub/dist",
+  "buildCommand": "bash vercel-build.sh",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!assets/|favicon.ico|vite.svg).*)", "destination": "/index.html" }
   ]
