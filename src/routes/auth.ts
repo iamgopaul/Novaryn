@@ -232,76 +232,6 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   const method = req.method;
   const sub = segments[0] ?? "";
 
-  // DEBUG: Simple POST test endpoint (no DB, no email)
-  if (sub === "ping" && method === "POST") {
-    const body = await req.json().catch(() => ({}));
-    return jsonResponse({ pong: true, received: body, timestamp: Date.now() });
-  }
-
-  // DEBUG: POST with DB read test
-  if (sub === "dbtest" && method === "POST") {
-    const start = Date.now();
-    const result = await db.select({ id: users.id }).from(users).limit(1);
-    const duration = Date.now() - start;
-    return jsonResponse({ dbWorks: true, userCount: result.length, durationMs: duration });
-  }
-
-  // DEBUG: POST with DB write (INSERT) test
-  if (sub === "dbwritetest" && method === "POST") {
-    const { auditLog } = await import("../db/schema");
-    const start = Date.now();
-    await db.insert(auditLog).values({
-      actor: "test-debug",
-      action: "test-write",
-      resource: "debug-endpoint",
-    });
-    const duration = Date.now() - start;
-    return jsonResponse({ dbWriteWorks: true, durationMs: duration });
-  }
-
-  // DEBUG: Test password hashing (CPU-intensive)
-  if (sub === "hashtest" && method === "POST") {
-    const start = Date.now();
-    const hash = await hashPassword("TestPassword123!");
-    const hashDuration = Date.now() - start;
-    const verifyStart = Date.now();
-    const valid = await verifyPassword("TestPassword123!", hash);
-    const verifyDuration = Date.now() - verifyStart;
-    return jsonResponse({ 
-      hashWorks: true, 
-      hashDurationMs: hashDuration,
-      verifyDurationMs: verifyDuration,
-      totalMs: hashDuration + verifyDuration,
-      valid,
-    });
-  }
-
-  // DEBUG: Test exact login query pattern (or + ilike)
-  if (sub === "querytest" && method === "POST") {
-    const start = Date.now();
-    const testIdentifier = "test@example.com";
-    const normalized = normalizeUsername(testIdentifier);
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(or(ilike(users.email, testIdentifier), eq(users.username, normalized)))
-      .limit(1);
-    const duration = Date.now() - start;
-    return jsonResponse({ queryWorks: true, found: !!user, durationMs: duration });
-  }
-
-  // DEBUG: Test simple eq query (without or/ilike)
-  if (sub === "simplequery" && method === "POST") {
-    const start = Date.now();
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, "test@example.com"))
-      .limit(1);
-    const duration = Date.now() - start;
-    return jsonResponse({ simpleQueryWorks: true, found: !!user, durationMs: duration });
-  }
-
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
@@ -398,18 +328,15 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
 
   // ── POST /auth/login ─────────────────────────────────────────────────────
   if (sub === "login" && method === "POST") {
-    console.log("[login] Starting login flow");
     const body = await req.json().catch(() => null);
-    console.log("[login] Body parsed");
     const parsed = LoginSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
 
     const identifier = parsed.data.identifier.trim();
     const normalized = normalizeUsername(identifier);
 
-    console.log("[login] Querying user:", identifier);
     // Try email first (case-insensitive), then username if not found
-    // Avoiding or() +ilike() which timeout with Neon HTTP driver
+    // Avoiding or() + ilike() which timeout with Neon HTTP driver
     let userResult = await db
       .select()
       .from(users)
@@ -425,7 +352,6 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     }
     
     const user = userResult[0];
-    console.log("[login] User query complete:", user ? "found" : "not found");
     if (!user) return errorResponse("Invalid username/email or password", 401);
 
     const valid = await verifyPassword(parsed.data.password, user.passwordHash);
