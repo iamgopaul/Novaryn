@@ -233,6 +233,125 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   const method = req.method;
   const sub = segments[0] ?? "";
 
+  // ── POST /auth/register/request (start registration with email verification) ───
+  if (sub === "register" && segments[1] === "request" && method === "POST") {
+    const body = await req.json().catch(() => null);
+    const parsed = RegisterSchema.safeParse(body);
+    if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+
+    const normalizedUsername = normalizeUsername(parsed.data.username);
+
+    // Check if email or username already exists
+    const existingByEmail = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, parsed.data.email))
+      .limit(1);
+    if (existingByEmail.length > 0) {
+      return errorResponse("Email already in use", 409);
+    }
+
+    const existingByUsername = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, normalizedUsername))
+      .limit(1);
+    if (existingByUsername.length > 0) {
+      return errorResponse("Username already taken", 409);
+    }
+
+    // Create registration challenge
+    const code = randomNumericCode(6);
+    const codeHash = await hashCode(code);
+    const expiresAt = addHours(new Date(), 1 / 6); // 10 minutes
+
+    const [challenge] = await db.insert(registrationChallenges).values({
+      email: parsed.data.email,
+      username: normalizedUsername,
+      name: parsed.data.name,
+      passwordHash: await hashPassword(parsed.data.password),
+      codeHash,
+      expiresAt,
+    }).returning({ id: registrationChallenges.id });
+
+    // Send verification email
+    const delivered = await sendEmailOtp(parsed.data.email, code, "register");
+    const destination = maskEmail(parsed.data.email);
+    if (!delivered) console.log(`[register] ${parsed.data.email} code=${code}`);
+    const includeDevCode = !isProduction() || !delivered;
+
+    return jsonResponse({
+      challengeId: challenge!.id,
+      destination,
+      ...(includeDevCode ? { devCode: code } : {}),
+    }, 201);
+  }
+
+  // ── POST /auth/register/confirm (complete registration with code) ───────
+  if (((sub === "register" && segments[1] === "confirm") || sub === "register-confirm") && method === "POST") {
+    const body = await req.json().catch(() => null);
+    const parsed = RegisterConfirmSchema.safeParse(body);
+    if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+
+    const [challenge] = await db.select().from(registrationChallenges)
+      .where(and(
+        eq(registrationChallenges.id, parsed.data.challengeId),
+        isNull(registrationChallenges.usedAt),
+        gt(registrationChallenges.expiresAt, new Date())
+      ))
+      .limit(1);
+
+    if (!challenge) return errorResponse("Registration challenge not found or expired", 404);
+
+    const codeHash = await hashCode(parsed.data.code);
+    if (codeHash !== challenge.codeHash) return errorResponse("Invalid verification code", 401);
+
+    // Check again if email or username was taken since challenge creation
+    const existingByEmail = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, challenge.email))
+      .limit(1);
+    if (existingByEmail.length > 0) {
+      return errorResponse("Email already in use", 409);
+    }
+
+    const existingByUsername = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.username, challenge.username))
+      .limit(1);
+    if (existingByUsername.length > 0) {
+      return errorResponse("Username already taken", 409);
+    }
+
+    // Create user
+    const [user] = await db.insert(users).values({
+      email: challenge.email,
+      username: challenge.username,
+      name: challenge.name,
+      passwordHash: challenge.passwordHash,
+    }).returning();
+
+    // Create personal org/workspace
+    const [personalOrg] = await db.insert(orgs).values({ name: `${challenge.name}'s Workspace` }).returning();
+    await db.insert(orgMembers).values({ orgId: personalOrg!.id, userId: user!.id, role: "owner" });
+
+    // Mark challenge as used
+    await db.update(registrationChallenges)
+      .set({ usedAt: new Date() })
+      .where(eq(registrationChallenges.id, challenge.id));
+
+    const { token, expiresAt } = await createSession(user!.id);
+    return new Response(JSON.stringify(safeUser(user!, "owner")), {
+      status: 201,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": makeSessionCookie(token, expiresAt),
+      },
+    });
+  }
+
   // ── POST /auth/register (direct registration, no email verification) ───────
   if (sub === "register" && method === "POST") {
     const body = await req.json().catch(() => null);

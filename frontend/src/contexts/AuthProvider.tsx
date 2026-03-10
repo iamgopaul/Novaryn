@@ -88,21 +88,33 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  async function register(email: string, username: string, name: string, password: string) {
-    const res = await fetch(apiUrl("/auth/register"), {
+  async function requestRegistration(email: string, username: string, name: string, password: string) {
+    const res = await fetch(apiUrl("/auth/register/request"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, name, password }),
     });
+    const data = await readJsonResponse<{ challengeId: string; destination: string; devCode?: string; error?: string }>(res);
+    if (!res.ok) throw new Error(data.error ?? "Registration request failed");
+    return { challengeId: data.challengeId, destination: data.destination, devCode: data.devCode };
+  }
+
+  async function confirmRegistration(challengeId: string, code: string) {
+    const res = await fetch(apiUrl("/auth/register/confirm"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challengeId, code }),
+    });
     const data = await readJsonResponse<AuthUser & { error?: string }>(res);
-    if (!res.ok) throw new Error(data.error ?? "Registration failed");
+    if (!res.ok) throw new Error(data.error ?? "Registration confirmation failed");
     setUser(data);
     setNeedsSetup(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, needsSetup, login, sendTwoFactorCode, verifyTwoFactor, logout, register, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, needsSetup, login, sendTwoFactorCode, verifyTwoFactor, logout, requestRegistration, confirmRegistration, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
