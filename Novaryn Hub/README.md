@@ -2,6 +2,8 @@
 
 React + Vite frontend for Novaryn.
 
+Deployment target: Vercel (Novaryn Hub project).
+
 ## Local development
 
 Install dependencies:
