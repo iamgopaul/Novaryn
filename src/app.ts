@@ -65,11 +65,6 @@ export async function handleRequest(req: Request): Promise<Response> {
     return errorResponse("Not found", 404);
   } catch (err) {
     console.error("Unhandled error:", err);
-    const detail = err instanceof Error ? err.message : String(err);
-    const cause = err && typeof err === "object" && "cause" in err
-      ? (err as { cause?: unknown }).cause
-      : undefined;
-    const causeDetail = cause instanceof Error ? cause.message : (cause ? String(cause) : undefined);
-    return jsonResponse({ error: "Internal server error", detail, cause: causeDetail }, 500);
+    return errorResponse("Internal server error", 500);
   }
 }

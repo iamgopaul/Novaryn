@@ -1,5 +1,7 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
+import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -13,14 +15,25 @@ const dbUnavailable = new Proxy({}, {
 	},
 });
 
-let queryClient: ReturnType<typeof neon> | null = null;
+let queryClient: ReturnType<typeof neon> | ReturnType<typeof postgres> | null = null;
 if (connectionString) {
 	try {
-		queryClient = neon(connectionString);
+		const isPoolerUrl = connectionString.includes("-pooler.");
+		queryClient = isPoolerUrl
+			? postgres(connectionString, {
+				max: 5,
+				connect_timeout: 5,
+				idle_timeout: 20,
+			})
+			: neon(connectionString);
 	} catch (error) {
 		console.error("DATABASE_URL failed to initialize postgres client", error);
 		queryClient = null;
 	}
 }
 
-export const db = queryClient ? drizzle(queryClient, { schema }) : (dbUnavailable as any);
+export const db = queryClient
+	? (connectionString?.includes("-pooler.")
+		? drizzlePostgres(queryClient as ReturnType<typeof postgres>, { schema })
+		: drizzle(queryClient as ReturnType<typeof neon>, { schema }))
+	: (dbUnavailable as any);
