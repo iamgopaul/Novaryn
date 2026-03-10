@@ -5,6 +5,9 @@ import * as schema from "./schema";
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
 	console.error("DATABASE_URL is not set");
+} else {
+	const hostname = new URL(connectionString).hostname;
+	console.log(`[DB] Using connection: ${hostname}`);
 }
 
 const dbUnavailable = new Proxy({}, {
