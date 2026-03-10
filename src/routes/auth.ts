@@ -246,6 +246,19 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     return jsonResponse({ dbWorks: true, userCount: result.length, durationMs: duration });
   }
 
+  // DEBUG: POST with DB write (INSERT) test
+  if (sub === "dbwritetest" && method === "POST") {
+    const { auditLog } = await import("../db/schema");
+    const start = Date.now();
+    await db.insert(auditLog).values({
+      actor: "test-debug",
+      action: "test-write",
+      resource: "debug-endpoint",
+    });
+    const duration = Date.now() - start;
+    return jsonResponse({ dbWriteWorks: true, durationMs: duration });
+  }
+
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
