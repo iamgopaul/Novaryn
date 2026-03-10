@@ -1,6 +1,7 @@
 {
   "name": "novaryn",
   "module": "index.ts",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "concurrently --names api,ui --prefix-colors cyan,magenta \"bun run --watch src/server.ts\" \"bun --cwd frontend dev\"",

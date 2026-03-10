@@ -1,4 +1,4 @@
-import { handleAuth } from "../../src/routes/auth";
+import { handleAuth } from "../../src/routes/auth.js";
 
 export const config = { runtime: "nodejs" };
 
