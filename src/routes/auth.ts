@@ -276,6 +276,20 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     });
   }
 
+  // DEBUG: Test exact login query pattern (or + ilike)
+  if (sub === "querytest" && method === "POST") {
+    const start = Date.now();
+    const testIdentifier = "test@example.com";
+    const normalized = normalizeUsername(testIdentifier);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(or(ilike(users.email, testIdentifier), eq(users.username, normalized)))
+      .limit(1);
+    const duration = Date.now() - start;
+    return jsonResponse({ queryWorks: true, found: !!user, durationMs: duration });
+  }
+
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
