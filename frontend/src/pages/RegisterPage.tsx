@@ -3,27 +3,92 @@ import { useAuth } from "../contexts/AuthContext";
 import { AuthShell } from "./LoginPage";
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { requestRegistration, confirmRegistration } = useAuth();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [code, setCode] = useState("");
+  const [challengeId, setChallengeId] = useState("");
+  const [destination, setDestination] = useState("");
+  const [step, setStep] = useState<"form" | "verify">("form");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (password !== confirm) { setError("Passwords do not match"); return; }
+
+    if (step === "form") {
+      if (password !== confirm) {
+        setError("Passwords do not match");
+        return;
+      }
+      setLoading(true);
+      try {
+        const result = await requestRegistration(email, username, name, password);
+        setChallengeId(result.challengeId);
+        setDestination(result.destination);
+        setStep("verify");
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(email, username, name, password);
+      await confirmRegistration(challengeId, code);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
     }
+  }
+
+  if (step === "verify") {
+    return (
+      <AuthShell title="Verify your email" subtitle={`We sent a 6-digit code to ${destination}`}>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Verification code</label>
+            <input
+              type="text"
+              required
+              minLength={6}
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              className="input w-full text-center text-2xl tracking-widest"
+              placeholder="000000"
+              autoFocus
+            />
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading || code.length !== 6}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2 rounded text-sm"
+          >
+            {loading ? "Verifying…" : "Verify & Create Account"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStep("form");
+              setCode("");
+              setError("");
+            }}
+            className="w-full text-gray-400 hover:text-gray-300 text-sm"
+          >
+            ← Back to form
+          </button>
+        </form>
+      </AuthShell>
+    );
   }
 
   return (
@@ -98,7 +163,7 @@ export default function RegisterPage() {
           disabled={loading}
           className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2 rounded text-sm"
         >
-          {loading ? "Creating account…" : "Create account"}
+          {loading ? "Sending verification…" : "Create account"}
         </button>
       </form>
     </AuthShell>
