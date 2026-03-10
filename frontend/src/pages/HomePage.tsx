@@ -204,25 +204,52 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
         </p>
       </div>
 
-      {/* Quick nav cards */}
+      {/* Workspace options */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Quick access</h2>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Workspace</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {[
             {
+              tab: "home" as Tab,
+              title: "Products",
+              icon: "📦",
+              desc: "Organize your product portfolio and group related capabilities by product line.",
+              action: "Coming soon",
+              disabled: true,
+              color: "border-gray-800",
+            },
+            {
               tab: "flags" as Tab,
-              title: "Feature Flags",
-              icon: "⚑",
-              desc: "Create and manage flags. Add rollout rules, allowlists, and toggle features on/off instantly.",
-              action: "Manage flags →",
+              title: "Services",
+              icon: "🧩",
+              desc: "Manage service applications in your workspace and launch into each service dashboard.",
+              action: "View services ↓",
               color: "border-indigo-800 hover:border-indigo-600",
             },
             {
-              tab: "experiments" as Tab,
-              title: "Experiments",
-              icon: "⚗",
-              desc: "Run A/B tests with multiple variants. Split traffic by weight and measure results.",
-              action: "View experiments →",
+              tab: "home" as Tab,
+              title: "Features",
+              icon: "✨",
+              desc: "Track and structure features across services for planning, rollout, and ownership.",
+              action: "Coming soon",
+              disabled: true,
+              color: "border-gray-800",
+            },
+            {
+              tab: "home" as Tab,
+              title: "Tools",
+              icon: "🛠",
+              desc: "Access workspace tools and automation utilities that support your teams.",
+              action: "Coming soon",
+              disabled: true,
+              color: "border-gray-800",
+            },
+            {
+              tab: "flags" as Tab,
+              title: "Novaryn ControlTower",
+              icon: "🏁",
+              desc: "Service: feature flags, experiments, audit logs, SDK keys, and environment controls.",
+              action: "Open service →",
               color: "border-purple-800 hover:border-purple-600",
             },
             {
@@ -243,9 +270,10 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
             },
           ].map((card) => (
             <button
-              key={card.tab}
-              onClick={() => onNavigate(card.tab)}
-              className={`border ${card.color} bg-gray-900 rounded-lg p-4 text-left transition-colors group`}
+              key={card.title}
+              onClick={() => !card.disabled && onNavigate(card.tab)}
+              disabled={card.disabled}
+              className={`border ${card.color} bg-gray-900 rounded-lg p-4 text-left transition-colors group disabled:opacity-70 disabled:cursor-default`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">{card.icon}</span>
