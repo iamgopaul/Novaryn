@@ -109,16 +109,24 @@ async function handleRequestInternal(req: Request): Promise<Response> {
 
     if (segments[0] === "tools" && segments[1] === "tinylink") {
       try {
+        const tinyLinkHost = process.env.TINYLINK_URL || "http://localhost:3001";
         const tinyLinkPath = "/" + segments.slice(2).join("/");
-        const tinyLinkUrl = `http://localhost:3001${tinyLinkPath}${url.search}`;
+        const tinyLinkUrl = `${tinyLinkHost}${tinyLinkPath}${url.search}`;
+        
+        console.log(`[TinyLink Proxy] ${req.method} ${tinyLinkUrl}`);
+        
         const tinyLinkReq = new Request(tinyLinkUrl, {
           method: req.method,
           headers: req.headers,
           body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
         });
-        return await fetch(tinyLinkReq);
+        
+        const tinyLinkRes = await fetch(tinyLinkReq);
+        console.log(`[TinyLink Proxy] Response: ${tinyLinkRes.status}`);
+        return tinyLinkRes;
       } catch (err) {
         console.error("TinyLink proxy error:", err);
+        console.error("Failed to reach TinyLink at", process.env.TINYLINK_URL || "http://localhost:3001");
         return errorResponse("TinyLink service unavailable", 503);
       }
     }
