@@ -603,18 +603,23 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     });
   }
 
-  // ── GET /auth/me ─────────────────────────────────────────────────────────
-  if (sub === "me" && method === "GET") {
+  // ── GET /auth/me and GET /auth/session ──────────────────────────────────
+  if ((sub === "me" || sub === "session") && method === "GET") {
     const user = await getSessionUser(req);
     if (!user) {
       // Check if any users exist (for first-time setup detection)
       const anyUser = await db.select({ id: users.id }).from(users).limit(1);
-      return new Response(
-        JSON.stringify({ user: null, needsSetup: anyUser.length === 0 }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return jsonResponse({
+        authenticated: false,
+        user: null,
+        needsSetup: anyUser.length === 0,
+      });
     }
-    return jsonResponse({ user, needsSetup: false });
+    return jsonResponse({
+      authenticated: true,
+      user,
+      needsSetup: false,
+    });
   }
 
   // ── POST /auth/invite ────────────────────────────────────────────────────

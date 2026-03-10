@@ -42,3 +42,12 @@ Notes:
 
 - Runtime API traffic should use pooled `DATABASE_URL`.
 - Migrations/scripts should use direct/non-pooled URL (`DATABASE_URL_UNPOOLED`).
+
+## Shared SSO contract (for Hub, Services, Tools)
+
+- `GET /auth/session` returns canonical session state for the current cookie/token:
+	- `{ authenticated, user, needsSetup }`
+- `GET /auth/me` remains available and now returns the same payload.
+- Future services/tools can reuse `src/middleware/sso.ts` with:
+	- `HUB_AUTH_SESSION_URL` (default: `http://localhost:3000/auth/session`)
+	- `HUB_AUTH_TIMEOUT_MS` (default: `5000`)

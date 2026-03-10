@@ -20,9 +20,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch(apiUrl("/auth/me"), { credentials: "include", signal });
+      const res = await fetch(apiUrl("/auth/session"), { credentials: "include", signal });
       if (!res.ok) { setUser(null); return; }
-      const data = await readJsonResponse<{ user: AuthUser | null; needsSetup: boolean }>(res);
+      const data = await readJsonResponse<{ authenticated: boolean; user: AuthUser | null; needsSetup: boolean }>(res);
       setUser(data.user);
       setNeedsSetup(data.needsSetup);
     } catch (err) {

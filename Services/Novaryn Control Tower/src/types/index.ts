@@ -84,3 +84,21 @@ export type EvaluatedFlag = {
   bucket?: number;
   version: number;
 };
+
+export type SharedSessionUser = {
+  id: string;
+  email: string;
+  username: string | null;
+  phone: string | null;
+  name: string;
+  orgId: string;
+  role: "owner" | "admin" | "member";
+  twoFactorEnabled: boolean;
+  twoFactorMethod: "email" | "phone" | "either";
+};
+
+export type SharedSessionState = {
+  authenticated: boolean;
+  user: SharedSessionUser | null;
+  needsSetup: boolean;
+};
