@@ -4,16 +4,24 @@ import * as schema from "./schema";
 
 // Use direct connection (unpooled) for Neon HTTP driver in serverless
 // Pooled connections have network restrictions in serverless environments
-const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+const connUrlUnpooled = process.env.DATABASE_URL_UNPOOLED;
+const connUrlPooled = process.env.DATABASE_URL;
+const connectionString = connUrlUnpooled || connUrlPooled;
+
+console.log("[DB] Environment check:");
+console.log(`[DB] DATABASE_URL_UNPOOLED set: ${!!connUrlUnpooled}`);
+console.log(`[DB] DATABASE_URL set: ${!!connUrlPooled}`);
+console.log(`[DB] Using: ${connUrlUnpooled ? "unpooled" : "pooled"}`);
+
 if (!connectionString) {
-	console.error("[DB] DATABASE_URL_UNPOOLED and DATABASE_URL are not set");
+	console.error("[DB] CRITICAL: No connection string available!");
 } else {
 	try {
-		const hostname = new URL(connectionString).hostname;
-		const isUnpooled = !connectionString.includes("-pooler.");
-		console.log(`[DB] Using ${isUnpooled ? "direct" : "pooled"} connection: ${hostname}`);
+		const url = new URL(connectionString);
+		console.log(`[DB] Connection host: ${url.hostname}`);
+		console.log(`[DB] Connection database: ${url.pathname}`);
 	} catch (e) {
-		console.error("[DB] Failed to parse connection string");
+		console.error("[DB] Failed to parse connection string:", (e as Error).message);
 	}
 }
 
