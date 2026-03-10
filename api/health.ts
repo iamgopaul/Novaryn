@@ -7,6 +7,7 @@ export default async function handler(req: any, res: any): Promise<void> {
     JSON.stringify({
       ok: true,
       runtime: "vercel-node",
+      release: "f345efc",
       method: req?.method ?? "GET",
       path: req?.url ?? "/api/health",
       timestamp: new Date().toISOString(),
