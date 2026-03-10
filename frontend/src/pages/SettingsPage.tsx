@@ -29,7 +29,7 @@ const SETTINGS_STEPS = [
 
 export default function SettingsPage() {
   const { projects, environments, reload, selectedProject } = useEnv();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const [showNewProject, setShowNewProject] = useState(false);
   const [showNewEnv, setShowNewEnv] = useState<string | null>(null); // projectId
   const [error, setError] = useState("");
@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [savingSecurity, setSavingSecurity] = useState(false);
+  const [securityMessage, setSecurityMessage] = useState("");
 
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "owner";
 
@@ -50,13 +51,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setTwoFactorEnabled(currentUser?.twoFactorEnabled ?? false);
+    setSecurityMessage("");
   }, [currentUser]);
 
   async function saveSecuritySettings() {
     setSavingSecurity(true);
     setError("");
+    setSecurityMessage("");
     try {
       await api.profile.update({ twoFactorEnabled, twoFactorMethod: "email" });
+      await refreshUser();
+      setSecurityMessage(twoFactorEnabled ? "Two-factor authentication is now ON." : "Two-factor authentication is now OFF.");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -178,9 +183,10 @@ export default function SettingsPage() {
             <label htmlFor="twoFactorEnabled" className="text-sm text-gray-300">Enable two-factor authentication</label>
           </div>
           <p className="text-xs text-gray-600">Verification and recovery codes are currently sent by email only.</p>
+          {securityMessage && <p className="text-xs text-green-400">{securityMessage}</p>}
           <button
             onClick={saveSecuritySettings}
-            disabled={savingSecurity}
+            disabled={savingSecurity || twoFactorEnabled === (currentUser?.twoFactorEnabled ?? false)}
             className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded font-medium"
           >
             {savingSecurity ? "Saving…" : "Save security settings"}
