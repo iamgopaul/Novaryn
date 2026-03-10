@@ -1,9 +1,8 @@
 export async function runNodeAdapter(req: any, res: any): Promise<void> {
   try {
-    const { handleRequest } = await import("../src/app");
+    const { handleRequest } = await import("../app");
     const method = req?.method ?? "GET";
 
-    // If runtime already provides a Web Request object, use it directly.
     if (typeof req?.headers?.get === "function" && typeof req?.text === "function") {
       const response = await handleRequest(req as Request);
       if (!res) return;
