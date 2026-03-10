@@ -65,6 +65,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     return errorResponse("Not found", 404);
   } catch (err) {
     console.error("Unhandled error:", err);
+    console.error("Error details:", {
+      message: (err as Error)?.message,
+      stack: (err as Error)?.stack,
+      cause: (err as any)?.cause,
+    });
     return errorResponse("Internal server error", 500);
   }
 }
