@@ -232,6 +232,12 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   const method = req.method;
   const sub = segments[0] ?? "";
 
+  // DEBUG: Simple POST test endpoint (no DB, no email)
+  if (sub === "ping" && method === "POST") {
+    const body = await req.json().catch(() => ({}));
+    return jsonResponse({ pong: true, received: body, timestamp: Date.now() });
+  }
+
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
