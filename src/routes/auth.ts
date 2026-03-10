@@ -81,6 +81,12 @@ function isProduction(): boolean {
   return (process.env.NODE_ENV ?? "development") === "production";
 }
 
+function registrationResendCooldownSeconds(): number {
+  const value = Number(process.env.REGISTRATION_RESEND_COOLDOWN_SECONDS ?? 60);
+  if (!Number.isFinite(value) || value < 0) return 60;
+  return Math.floor(value);
+}
+
 async function sendEmailOtp(to: string, code: string, purpose: "login" | "recovery" | "register"): Promise<boolean> {
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.OTP_FROM_EMAIL ?? "onboarding@resend.dev";
@@ -171,6 +177,10 @@ const RegisterSchema = z.object({
 const RegisterConfirmSchema = z.object({
   challengeId: z.string().uuid(),
   code: z.string().length(6),
+});
+
+const RegisterResendSchema = z.object({
+  challengeId: z.string().uuid(),
 });
 
 const LoginSchema = z.object({
@@ -296,8 +306,66 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     return jsonResponse({
       challengeId: challenge!.id,
       destination,
+      resendCooldownSeconds: registrationResendCooldownSeconds(),
       ...(!isProduction() ? { devCode: code } : {}),
     }, 201);
+  }
+
+  // ── POST /auth/register/resend (resend registration verification code) ───
+  if (sub === "register" && segments[1] === "resend" && method === "POST") {
+    const body = await req.json().catch(() => null);
+    const parsed = RegisterResendSchema.safeParse(body);
+    if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+
+    const [challenge] = await db.select().from(registrationChallenges)
+      .where(and(
+        eq(registrationChallenges.id, parsed.data.challengeId),
+        isNull(registrationChallenges.usedAt),
+        gt(registrationChallenges.expiresAt, new Date()),
+      ))
+      .limit(1);
+
+    if (!challenge) return errorResponse("Registration challenge not found or expired", 404);
+
+    const cooldownSeconds = registrationResendCooldownSeconds();
+    const elapsedSeconds = Math.floor((Date.now() - new Date(challenge.createdAt).getTime()) / 1000);
+    const retryAfterSeconds = Math.max(0, cooldownSeconds - elapsedSeconds);
+    if (retryAfterSeconds > 0) {
+      return jsonResponse({ error: `Please wait ${retryAfterSeconds}s before requesting another code.`, retryAfterSeconds }, 429);
+    }
+
+    const code = randomNumericCode(6);
+    const codeHash = await hashCode(code);
+    const expiresAt = addHours(new Date(), 1 / 6);
+    const [newChallenge] = await db.insert(registrationChallenges).values({
+      email: challenge.email,
+      username: challenge.username,
+      name: challenge.name,
+      passwordHash: challenge.passwordHash,
+      codeHash,
+      expiresAt,
+    }).returning({ id: registrationChallenges.id });
+
+    const delivered = await sendEmailOtp(challenge.email, code, "register");
+    if (!delivered && isProduction()) {
+      await db.delete(registrationChallenges).where(eq(registrationChallenges.id, newChallenge!.id));
+      return errorResponse("Could not send verification email. Please try again.", 502);
+    }
+
+    await db.update(registrationChallenges)
+      .set({ usedAt: new Date() })
+      .where(eq(registrationChallenges.id, challenge.id));
+
+    if (!delivered) {
+      console.log(`[register] ${challenge.email} code=${code}`);
+    }
+
+    return jsonResponse({
+      challengeId: newChallenge!.id,
+      destination: maskEmail(challenge.email),
+      resendCooldownSeconds: cooldownSeconds,
+      ...(!isProduction() ? { devCode: code } : {}),
+    }, 200);
   }
 
   // ── POST /auth/register/confirm (complete registration with code) ───────

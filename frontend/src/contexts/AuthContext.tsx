@@ -23,6 +23,7 @@ export type LoginResult = {
 export type RegistrationResult = {
   challengeId: string;
   destination: string;
+  resendCooldownSeconds?: number;
   devCode?: string;
 };
 
@@ -37,6 +38,7 @@ export type AuthState = {
   verifyTwoFactor: (challengeId: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   requestRegistration: (email: string, username: string, name: string, password: string) => Promise<RegistrationResult>;
+  resendRegistrationCode: (challengeId: string) => Promise<RegistrationResult>;
   confirmRegistration: (challengeId: string, code: string) => Promise<void>;
   refreshUser: () => Promise<void>;
 };

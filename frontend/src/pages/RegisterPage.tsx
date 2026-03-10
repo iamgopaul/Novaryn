@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { AuthShell } from "./LoginPage";
 
 export default function RegisterPage() {
-  const { requestRegistration, confirmRegistration } = useAuth();
+  const { requestRegistration, resendRegistrationCode, confirmRegistration } = useAuth();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
@@ -13,8 +13,18 @@ export default function RegisterPage() {
   const [challengeId, setChallengeId] = useState("");
   const [destination, setDestination] = useState("");
   const [step, setStep] = useState<"form" | "verify">("form");
+  const [resendCooldownLeft, setResendCooldownLeft] = useState(0);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (resendCooldownLeft <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldownLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldownLeft]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -30,6 +40,7 @@ export default function RegisterPage() {
         const result = await requestRegistration(email, username, name, password);
         setChallengeId(result.challengeId);
         setDestination(result.destination);
+        setResendCooldownLeft(result.resendCooldownSeconds ?? 60);
         setStep("verify");
       } catch (err) {
         setError((err as Error).message);
@@ -46,6 +57,22 @@ export default function RegisterPage() {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendCode() {
+    if (resendCooldownLeft > 0 || !challengeId) return;
+    setError("");
+    setResending(true);
+    try {
+      const result = await resendRegistrationCode(challengeId);
+      setChallengeId(result.challengeId);
+      setDestination(result.destination);
+      setResendCooldownLeft(result.resendCooldownSeconds ?? 60);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setResending(false);
     }
   }
 
@@ -85,6 +112,18 @@ export default function RegisterPage() {
             className="w-full text-gray-400 hover:text-gray-300 text-sm"
           >
             ← Back to form
+          </button>
+          <button
+            type="button"
+            onClick={handleResendCode}
+            disabled={resending || resendCooldownLeft > 0}
+            className="w-full text-gray-400 hover:text-gray-300 disabled:opacity-50 text-sm"
+          >
+            {resending
+              ? "Resending code…"
+              : resendCooldownLeft > 0
+                ? `Resend code in ${resendCooldownLeft}s`
+                : "Resend code"}
           </button>
         </form>
       </AuthShell>

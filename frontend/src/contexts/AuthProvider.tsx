@@ -95,9 +95,31 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, name, password }),
     });
-    const data = await readJsonResponse<{ challengeId: string; destination: string; devCode?: string; error?: string }>(res);
+    const data = await readJsonResponse<{ challengeId: string; destination: string; resendCooldownSeconds?: number; devCode?: string; error?: string }>(res);
     if (!res.ok) throw new Error(data.error ?? "Registration request failed");
-    return { challengeId: data.challengeId, destination: data.destination, devCode: data.devCode };
+    return {
+      challengeId: data.challengeId,
+      destination: data.destination,
+      resendCooldownSeconds: data.resendCooldownSeconds,
+      devCode: data.devCode,
+    };
+  }
+
+  async function resendRegistrationCode(challengeId: string) {
+    const res = await fetch(apiUrl("/auth/register/resend"), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ challengeId }),
+    });
+    const data = await readJsonResponse<{ challengeId: string; destination: string; resendCooldownSeconds?: number; devCode?: string; error?: string }>(res);
+    if (!res.ok) throw new Error(data.error ?? "Failed to resend code");
+    return {
+      challengeId: data.challengeId,
+      destination: data.destination,
+      resendCooldownSeconds: data.resendCooldownSeconds,
+      devCode: data.devCode,
+    };
   }
 
   async function confirmRegistration(challengeId: string, code: string) {
@@ -114,7 +136,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, needsSetup, login, sendTwoFactorCode, verifyTwoFactor, logout, requestRegistration, confirmRegistration, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, needsSetup, login, sendTwoFactorCode, verifyTwoFactor, logout, requestRegistration, resendRegistrationCode, confirmRegistration, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
