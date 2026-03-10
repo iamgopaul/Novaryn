@@ -16,6 +16,17 @@ function resolveCorsOrigin(req: Request): string | null {
   const origin = req.headers.get("origin");
   if (!origin) return null;
 
+  if ((process.env.NODE_ENV ?? "development") !== "production") {
+    try {
+      const parsed = new URL(origin);
+      if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+        return origin;
+      }
+    } catch {
+      // Ignore malformed origin and continue with explicit allowlist checks.
+    }
+  }
+
   const allowedOrigins = getAllowedOrigins();
   if (allowedOrigins.length === 0) {
     return (process.env.NODE_ENV ?? "development") === "production" ? null : origin;

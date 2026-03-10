@@ -29,7 +29,7 @@ const SETTINGS_STEPS = [
 
 export default function SettingsPage() {
   const { projects, environments, reload, selectedProject } = useEnv();
-  const { user: currentUser, refreshUser } = useAuth();
+  const { user: currentUser } = useAuth();
   const [showNewProject, setShowNewProject] = useState(false);
   const [showNewEnv, setShowNewEnv] = useState<string | null>(null); // projectId
   const [error, setError] = useState("");
@@ -38,9 +38,6 @@ export default function SettingsPage() {
   const [showEmailInvite, setShowEmailInvite] = useState(false);
   const [receivedInvites, setReceivedInvites] = useState<ReceivedProjectInvite[]>([]);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [savingSecurity, setSavingSecurity] = useState(false);
-  const [securityMessage, setSecurityMessage] = useState("");
 
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "owner";
 
@@ -48,26 +45,6 @@ export default function SettingsPage() {
     api.team.list().then(setTeam).catch(() => {});
     api.projectInvites.received().then(setReceivedInvites).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    setTwoFactorEnabled(currentUser?.twoFactorEnabled ?? false);
-    setSecurityMessage("");
-  }, [currentUser]);
-
-  async function saveSecuritySettings() {
-    setSavingSecurity(true);
-    setError("");
-    setSecurityMessage("");
-    try {
-      await api.profile.update({ twoFactorEnabled, twoFactorMethod: "email" });
-      await refreshUser();
-      setSecurityMessage(twoFactorEnabled ? "Two-factor authentication is now ON." : "Two-factor authentication is now OFF.");
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setSavingSecurity(false);
-    }
-  }
 
   async function respondToInvite(id: string, action: "accept" | "decline") {
     try {
@@ -166,31 +143,6 @@ export default function SettingsPage() {
             <code className="text-xs text-gray-500 font-mono">Set via ADMIN_API_KEY in .env</code>
           </div>
           <span className="text-xs bg-green-900/30 border border-green-800 text-green-400 px-2 py-1 rounded">Active</span>
-        </div>
-      </section>
-
-      {/* Account security */}
-      <section className="mt-8 border border-gray-800 bg-gray-900 rounded-lg p-4">
-        <h2 className="text-sm font-medium text-gray-300 mb-3">Account security</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <input
-              id="twoFactorEnabled"
-              type="checkbox"
-              checked={twoFactorEnabled}
-              onChange={(e) => setTwoFactorEnabled(e.target.checked)}
-            />
-            <label htmlFor="twoFactorEnabled" className="text-sm text-gray-300">Enable two-factor authentication</label>
-          </div>
-          <p className="text-xs text-gray-600">Verification and recovery codes are currently sent by email only.</p>
-          {securityMessage && <p className="text-xs text-green-400">{securityMessage}</p>}
-          <button
-            onClick={saveSecuritySettings}
-            disabled={savingSecurity || twoFactorEnabled === (currentUser?.twoFactorEnabled ?? false)}
-            className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded font-medium"
-          >
-            {savingSecurity ? "Saving…" : "Save security settings"}
-          </button>
         </div>
       </section>
 

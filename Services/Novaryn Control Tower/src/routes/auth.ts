@@ -36,6 +36,7 @@ function safeUser(u: {
   name: string;
   username?: string | null;
   phone?: string | null;
+  avatarUrl?: string | null;
   twoFactorEnabled?: boolean;
   twoFactorMethod?: "email" | "phone" | "either" | string;
 }, role: string) {
@@ -44,6 +45,7 @@ function safeUser(u: {
     email: u.email,
     username: u.username ?? null,
     phone: u.phone ?? null,
+    avatarUrl: u.avatarUrl ?? null,
     name: u.name,
     role,
     twoFactorEnabled: u.twoFactorEnabled ?? false,
@@ -218,6 +220,7 @@ const UpdateProfileSchema = z.object({
   twoFactorEnabled: z.boolean().optional(),
   twoFactorMethod: z.enum(["email", "phone", "either"]).optional(),
   name: z.string().min(1).max(100).optional(),
+  avatarUrl: z.string().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).optional(),
 });
@@ -1034,57 +1037,71 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     const auth = await requireAuth(req, "member");
     if (auth instanceof Response) return auth;
 
-    const body = await req.json().catch(() => null);
-    const parsed = UpdateProfileSchema.safeParse(body);
-    if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+    try {
+      const body = await req.json().catch(() => null);
+      const parsed = UpdateProfileSchema.safeParse(body);
+      if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
 
-    const [user] = await db.select().from(users).where(eq(users.id, auth.user.id)).limit(1);
-    if (!user) return errorResponse("User not found", 404);
+      const [user] = await db.select().from(users).where(eq(users.id, auth.user.id)).limit(1);
+      if (!user) return errorResponse("User not found", 404);
 
-    const updates: Partial<typeof user> = {};
+      const updates: Partial<typeof user> = {};
 
-    if (parsed.data.username) {
-      const normalizedUsername = normalizeUsername(parsed.data.username);
-      const [existingUsername] = await db.select({ id: users.id })
-        .from(users)
-        .where(eq(users.username, normalizedUsername))
-        .limit(1);
-      if (existingUsername && existingUsername.id !== auth.user.id) return errorResponse("Username already taken", 409);
-      updates.username = normalizedUsername;
-    }
-
-    if (parsed.data.phone !== undefined) {
-      const normalizedPhone = normalizePhone(parsed.data.phone);
-      const [existingPhone] = await db.select({ id: users.id })
-        .from(users)
-        .where(eq(users.phone, normalizedPhone))
-        .limit(1);
-      if (existingPhone && existingPhone.id !== auth.user.id) return errorResponse("Phone number already in use", 409);
-      updates.phone = normalizedPhone;
-    }
-
-    if (parsed.data.name) updates.name = parsed.data.name;
-
-    if (parsed.data.twoFactorMethod) updates.twoFactorMethod = parsed.data.twoFactorMethod;
-    if (parsed.data.twoFactorEnabled !== undefined) {
-      const finalPhone = (updates.phone ?? user.phone) as string | null;
-      const finalMethod = (updates.twoFactorMethod ?? user.twoFactorMethod) as "email" | "phone" | "either";
-      if (parsed.data.twoFactorEnabled && finalMethod === "phone" && !finalPhone) {
-        return errorResponse("Add a phone number before enabling phone-only 2FA", 400);
+      if (parsed.data.username) {
+        const normalizedUsername = normalizeUsername(parsed.data.username);
+        const [existingUsername] = await db.select({ id: users.id })
+          .from(users)
+          .where(eq(users.username, normalizedUsername))
+          .limit(1);
+        if (existingUsername && existingUsername.id !== auth.user.id) return errorResponse("Username already taken", 409);
+        updates.username = normalizedUsername;
       }
-      updates.twoFactorEnabled = parsed.data.twoFactorEnabled;
-    }
 
-    if (parsed.data.newPassword) {
-      if (!parsed.data.currentPassword) return errorResponse("Current password required");
-      const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
-      if (!valid) return errorResponse("Current password incorrect", 401);
-      updates.passwordHash = await hashPassword(parsed.data.newPassword);
-    }
+      if (parsed.data.phone !== undefined) {
+        const normalizedPhone = normalizePhone(parsed.data.phone);
+        const [existingPhone] = await db.select({ id: users.id })
+          .from(users)
+          .where(eq(users.phone, normalizedPhone))
+          .limit(1);
+        if (existingPhone && existingPhone.id !== auth.user.id) return errorResponse("Phone number already in use", 409);
+        updates.phone = normalizedPhone;
+      }
 
-    updates.updatedAt = new Date();
-    await db.update(users).set(updates).where(eq(users.id, user.id));
-    return jsonResponse({ ok: true });
+      if (parsed.data.name) updates.name = parsed.data.name;
+
+      if (parsed.data.avatarUrl !== undefined) {
+        // Validate avatarUrl size (max 1MB)
+        const urlSize = parsed.data.avatarUrl ? parsed.data.avatarUrl.length : 0;
+        if (urlSize > 1024 * 1024) {
+          return errorResponse("Image too large (max 1MB)", 400);
+        }
+        updates.avatarUrl = parsed.data.avatarUrl || null;
+      }
+
+      if (parsed.data.twoFactorMethod) updates.twoFactorMethod = parsed.data.twoFactorMethod;
+      if (parsed.data.twoFactorEnabled !== undefined) {
+        const finalPhone = (updates.phone ?? user.phone) as string | null;
+        const finalMethod = (updates.twoFactorMethod ?? user.twoFactorMethod) as "email" | "phone" | "either";
+        if (parsed.data.twoFactorEnabled && finalMethod === "phone" && !finalPhone) {
+          return errorResponse("Add a phone number before enabling phone-only 2FA", 400);
+        }
+        updates.twoFactorEnabled = parsed.data.twoFactorEnabled;
+      }
+
+      if (parsed.data.newPassword) {
+        if (!parsed.data.currentPassword) return errorResponse("Current password required");
+        const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
+        if (!valid) return errorResponse("Current password incorrect", 401);
+        updates.passwordHash = await hashPassword(parsed.data.newPassword);
+      }
+
+      updates.updatedAt = new Date();
+      await db.update(users).set(updates).where(eq(users.id, user.id));
+      return jsonResponse({ ok: true });
+    } catch (err) {
+      console.error("PATCH /auth/profile error:", err);
+      return errorResponse(`Server error: ${err instanceof Error ? err.message : "Unknown error"}`, 500);
+    }
   }
 
   return errorResponse("Not found", 404);

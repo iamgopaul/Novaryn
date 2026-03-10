@@ -1,5 +1,37 @@
 @import "tailwindcss";
 
+:root {
+  --app-bg: #030712;
+  --app-text: #f3f4f6;
+  --app-glow: rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="ocean"] {
+  --app-bg: #04131f;
+  --app-text: #e6f3ff;
+  --app-glow: rgba(14, 165, 233, 0.18);
+}
+
+[data-theme="sunset"] {
+  --app-bg: #17090b;
+  --app-text: #fff0e8;
+  --app-glow: rgba(249, 115, 22, 0.18);
+}
+
+[data-theme="forest"] {
+  --app-bg: #07130d;
+  --app-text: #e9fff2;
+  --app-glow: rgba(34, 197, 94, 0.18);
+}
+
+.app-shell {
+  min-height: 100vh;
+  color: var(--app-text);
+  background:
+    radial-gradient(1200px 500px at 10% -20%, var(--app-glow), transparent 60%),
+    var(--app-bg);
+}
+
 @layer components {
   .input {
     @apply w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-indigo-500;

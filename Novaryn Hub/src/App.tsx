@@ -8,17 +8,19 @@ import FlagsPage from "./pages/FlagsPage";
 import AuditPage from "./pages/AuditPage";
 import ExperimentsPage from "./pages/ExperimentsPage";
 import KeysPage from "./pages/KeysPage";
-import SettingsPage from "./pages/SettingsPage";
+import ControlTowerSettingsPage from "./pages/SettingsPage";
+import HubSettingsPage from "./pages/HubSettingsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import { getProfileCustomization, subscribeProfileCustomization, type ThemeId } from "./utils/profileCustomization";
 
 type HubTab = "home" | "services" | "products" | "tools" | "settings";
 type ControlTowerTab = "flags" | "experiments" | "audit" | "keys" | "settings";
 
 const HUB_TABS: { id: HubTab; label: string }[] = [
-  { id: "home", label: "Novaryn" },
+  { id: "home", label: "Home" },
   { id: "services", label: "Services" },
   { id: "products", label: "Products" },
   { id: "tools", label: "Tools" },
@@ -101,14 +103,17 @@ function AppInner() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="app-shell">
       <header className="border-b border-gray-800 px-3 sm:px-6 py-2 sm:py-0 flex flex-wrap items-center gap-2 sm:gap-0">
         {/* Logo — clicking goes home */}
         <button
           onClick={() => setHubTab("home")}
-          className="font-bold text-base tracking-tight py-2 sm:py-4 shrink-0 hover:text-indigo-400 transition-colors"
+          className="font-extrabold text-lg sm:text-2xl tracking-tight py-2 sm:py-4 shrink-0 text-indigo-300 hover:text-indigo-200 drop-shadow-[0_0_10px_rgba(99,102,241,0.45)] transition-colors"
         >
-          Novaryn
+          <span className="inline-flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+            Novaryn
+          </span>
         </button>
 
         {/* Project + Env selectors (shown for ControlTower service) */}
@@ -152,7 +157,7 @@ function AppInner() {
         )}
 
         {/* Hub nav */}
-        <nav className="order-4 sm:order-none w-full sm:w-auto flex overflow-x-auto">
+        <nav className="order-4 sm:order-none w-full sm:w-auto sm:ml-12 sm:mt-1 flex overflow-x-auto">
           {HUB_TABS.map((t) => (
             <button
               key={t.id}
@@ -225,7 +230,7 @@ function AppInner() {
             {controlTowerTab === "experiments" && <ExperimentsPage />}
             {controlTowerTab === "audit" && <AuditPage />}
             {controlTowerTab === "keys" && <KeysPage />}
-            {controlTowerTab === "settings" && <SettingsPage />}
+            {controlTowerTab === "settings" && <ControlTowerSettingsPage />}
           </>
         )}
 
@@ -243,7 +248,7 @@ function AppInner() {
           </div>
         )}
 
-        {hubTab === "settings" && <SettingsPage />}
+        {hubTab === "settings" && <HubSettingsPage />}
       </main>
     </div>
   );
@@ -264,6 +269,23 @@ function AuthGate() {
   // Always start on the landing — never infer login/register from a stale URL.
   // The only way to reach login/register is by clicking a button in-app.
   const [authView, setAuthView] = useState<"landing" | "login" | "register">("landing");
+
+  useEffect(() => {
+    if (!user) {
+      document.documentElement.setAttribute("data-theme", "default");
+      return;
+    }
+
+    const applyTheme = () => {
+      const theme = (getProfileCustomization(user.id).theme ?? "default") as ThemeId;
+      document.documentElement.setAttribute("data-theme", theme);
+    };
+
+    applyTheme();
+    return subscribeProfileCustomization(user.id, () => {
+      applyTheme();
+    });
+  }, [user]);
 
   useEffect(() => {
     const onPop = () => {
@@ -320,9 +342,12 @@ function AuthGate() {
 
   // Default for all unauthenticated visitors: public landing
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="app-shell">
       <header className="border-b border-gray-800 px-3 sm:px-6 py-2 sm:py-0 flex items-center gap-2">
-        <span className="font-bold text-base tracking-tight py-4 mr-auto">Novaryn</span>
+        <span className="font-extrabold text-lg sm:text-2xl tracking-tight py-4 mr-auto text-indigo-300 drop-shadow-[0_0_10px_rgba(99,102,241,0.45)] inline-flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+          Novaryn
+        </span>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button onClick={goRegister} className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
             Create account
@@ -343,8 +368,24 @@ function AuthGate() {
 function UserMenu() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
 
   if (!user) return null;
+
+  useEffect(() => {
+    const updateAvatar = () => {
+      // Use avatar from user object (database) first, then fall back to localStorage
+      const dbAvatarUrl = (user as any).avatarUrl;
+      setAvatarUrl(dbAvatarUrl ?? getProfileCustomization(user.id).avatarUrl ?? "");
+    };
+
+    updateAvatar();
+    return subscribeProfileCustomization(user.id, (next) => {
+      // Still subscribe to localStorage changes as fallback
+      const dbAvatarUrl = (user as any).avatarUrl;
+      setAvatarUrl(dbAvatarUrl ?? next.avatarUrl ?? "");
+    });
+  }, [user.id, user]);
 
   return (
     <div className="ml-auto pl-4 relative shrink-0">
@@ -352,9 +393,17 @@ function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 py-2 px-3 rounded hover:bg-gray-800 transition-colors text-sm"
       >
-        <span className="w-6 h-6 rounded-full bg-indigo-700 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0">
-          {user.name[0]}
-        </span>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={`${user.name} avatar`}
+            className="w-6 h-6 rounded-lg object-cover border border-indigo-800 shrink-0"
+          />
+        ) : (
+          <span className="w-6 h-6 rounded-lg bg-indigo-700 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0">
+            {user.name[0]}
+          </span>
+        )}
         <span className="text-gray-300 max-w-[120px] truncate hidden sm:block">{user.name}</span>
         <span className={`text-xs px-1 py-0.5 rounded font-mono hidden sm:block ${
           user.role === "owner" ? "bg-yellow-900/50 text-yellow-400 border border-yellow-800" :

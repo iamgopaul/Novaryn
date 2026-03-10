@@ -90,6 +90,7 @@ export const users = pgTable("users", {
   phone: text("phone").unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
+  avatarUrl: text("avatar_url"),
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   twoFactorMethod: text("two_factor_method").notNull().default("either"), // email | phone | either
   createdAt: timestamp("created_at", tsz).defaultNow().notNull(),

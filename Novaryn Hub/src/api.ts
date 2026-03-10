@@ -152,6 +152,7 @@ export const api = {
       twoFactorEnabled?: boolean;
       twoFactorMethod?: "email" | "phone" | "either";
       name?: string;
+      avatarUrl?: string;
       currentPassword?: string;
       newPassword?: string;
     }) =>
