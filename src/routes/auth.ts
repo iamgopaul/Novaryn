@@ -98,7 +98,8 @@ async function sendEmailOtp(to: string, code: string, purpose: "login" | "recove
       : `Your Novaryn verification code is ${code}. It expires in 10 minutes.`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeoutMs = Number(process.env.OTP_EMAIL_TIMEOUT_MS ?? 12000);
+  const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) ? timeoutMs : 12000);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -114,7 +115,12 @@ async function sendEmailOtp(to: string, code: string, purpose: "login" | "recove
       }),
       signal: controller.signal,
     });
-    return res.ok;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("sendEmailOtp failed response:", { status: res.status, body });
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error("sendEmailOtp failed:", error);
     return false;
