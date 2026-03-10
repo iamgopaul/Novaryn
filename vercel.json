@@ -1,6 +1,6 @@
 {
-  "installCommand": "bun --cwd 'Novaryn Hub' install",
-  "buildCommand": "bun --cwd 'Novaryn Hub' run build",
+  "installCommand": "bun install --cwd 'Novaryn Hub'",
+  "buildCommand": "bun run --cwd 'Novaryn Hub' build",
   "outputDirectory": "Novaryn Hub/dist",
   "rewrites": [
     { "source": "/((?!assets/|favicon.ico|vite.svg).*)", "destination": "/index.html" }
