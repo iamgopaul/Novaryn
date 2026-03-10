@@ -102,7 +102,7 @@ export default function FlagsPage() {
         <div className="mb-4 text-sm text-red-400 bg-red-900/30 border border-red-800 rounded px-3 py-2">{error}</div>
       )}
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
           <h1 className="text-xl font-semibold">Feature Flags</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -125,11 +125,11 @@ export default function FlagsPage() {
         <input
           value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Search flags…"
-          className="input text-sm max-w-xs"
+          className="input text-sm w-full sm:max-w-xs"
         />
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Flag list */}
         <div className="flex-1 space-y-2 min-w-0">
           {!selectedEnv && (
@@ -162,7 +162,7 @@ export default function FlagsPage() {
 
         {/* Side panel */}
         {selected && (
-          <div className="w-80 shrink-0">
+          <div className="w-full lg:w-80 shrink-0">
             <div className="flex border border-gray-800 rounded-t-lg overflow-hidden">
               <button onClick={() => setShowTest(false)}
                 className={`flex-1 text-xs py-2 font-medium transition-colors ${!showTest ? "bg-gray-800 text-white" : "bg-gray-900 text-gray-500 hover:text-gray-300"}`}>

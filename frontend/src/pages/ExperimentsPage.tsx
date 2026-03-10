@@ -84,7 +84,7 @@ export default function ExperimentsPage() {
           {error}
         </div>
       )}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 className="text-xl font-semibold">Experiments</h1>
         <button
           onClick={() => setShowCreate(true)}

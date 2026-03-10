@@ -52,24 +52,24 @@ function AppInner() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      <header className="border-b border-gray-800 px-6 py-0 flex items-center gap-0">
+      <header className="border-b border-gray-800 px-3 sm:px-6 py-2 sm:py-0 flex flex-wrap items-center gap-2 sm:gap-0">
         {/* Logo — clicking goes home */}
         <button
           onClick={() => setTab("home")}
-          className="font-bold text-base tracking-tight mr-6 py-4 shrink-0 hover:text-indigo-400 transition-colors"
+          className="font-bold text-base tracking-tight py-2 sm:py-4 shrink-0 hover:text-indigo-400 transition-colors"
         >
           Novaryn
         </button>
 
         {/* Project + Env selectors */}
-        <div className="flex items-center gap-2 mr-6 py-4 border-r border-gray-800 pr-6">
+        <div className="order-3 sm:order-none w-full sm:w-auto flex items-center gap-2 py-2 sm:py-4 sm:mr-6 sm:pr-6 sm:border-r border-gray-800 overflow-x-auto">
           <select
             value={selectedProject?.id ?? ""}
             onChange={(e) => {
               const p = projects.find((p) => p.id === e.target.value);
               if (p) setSelectedProject(p);
             }}
-            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer min-w-0"
           >
             {projects.length === 0 && <option value="">No projects</option>}
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -83,7 +83,7 @@ function AppInner() {
               const env = envsForProject.find((ev) => ev.id === e.target.value);
               if (env) setSelectedEnv(env);
             }}
-            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer min-w-0"
             style={{ colorScheme: "dark" }}
           >
             {envsForProject.length === 0 && <option value="">No environments</option>}
@@ -100,12 +100,12 @@ function AppInner() {
         </div>
 
         {/* Nav tabs */}
-        <nav className="flex h-full">
+        <nav className="order-4 sm:order-none w-full sm:w-auto flex overflow-x-auto">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-4 py-4 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              className={`px-3 sm:px-4 py-2 sm:py-4 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
                 tab === t.id
                   ? "border-indigo-500 text-white"
                   : "border-transparent text-gray-400 hover:text-gray-200"
@@ -120,7 +120,7 @@ function AppInner() {
         <UserMenu />
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {tab === "home" && <HomePage onNavigate={setTab} />}
         {tab === "flags" && <FlagsPage />}
         {tab === "experiments" && <ExperimentsPage />}
@@ -204,9 +204,9 @@ function AuthGate() {
   // Default for all unauthenticated visitors: public landing
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      <header className="border-b border-gray-800 px-6 flex items-center">
+      <header className="border-b border-gray-800 px-3 sm:px-6 py-2 sm:py-0 flex items-center gap-2">
         <span className="font-bold text-base tracking-tight py-4 mr-auto">Novaryn</span>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button onClick={goRegister} className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
             Create account
           </button>
@@ -215,7 +215,7 @@ function AuthGate() {
           </button>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <HomePage />
       </main>
     </div>

@@ -24,16 +24,16 @@ function Landing() {
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
           Self-hosted · Open source · No vendor lock-in
         </div>
-        <h1 className="text-5xl font-bold tracking-tight mb-5 leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5 leading-tight">
           Ship fearlessly with
           <br />
           <span className="text-indigo-400">Novaryn</span>
         </h1>
-        <p className="text-gray-400 text-xl leading-relaxed max-w-2xl mx-auto mb-10">
+        <p className="text-gray-400 text-base sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10">
           A self-hosted feature flag and A/B testing platform. Control what your users see, roll out gradually,
           and run experiments — all without redeploying your app.
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={() => go("register")}
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-lg text-sm transition-colors"
@@ -166,7 +166,7 @@ if (flags.find(f => f.key === "dark_mode")?.value) {
             Create your account to set up your own workspace, project, environment, and feature flags.
             The whole thing takes about two minutes.
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               onClick={() => go("register")}
               className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-lg text-sm transition-colors"
