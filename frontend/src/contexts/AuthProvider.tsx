@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, type ReactNode } from "react";
-import { AuthContext, type AuthUser, type LoginResult, type RegisterRequestResult } from "./AuthContext";
+import { AuthContext, type AuthUser, type LoginResult } from "./AuthContext";
 
 async function readJsonResponse<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -87,33 +87,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  async function requestRegistration(email: string, username: string, name: string, password: string): Promise<RegisterRequestResult> {
-    const res = await fetch("/auth/register-request", {
+  async function register(email: string, username: string, name: string, password: string) {
+    const res = await fetch("/auth/register", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, name, password }),
     });
-    const data = await readJsonResponse<RegisterRequestResult & { error?: string }>(res);
-    if (!res.ok) throw new Error(data.error ?? "Registration request failed");
-    return data;
-  }
-
-  async function confirmRegistration(challengeId: string, code: string) {
-    const res = await fetch("/auth/register-confirm", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ challengeId, code }),
-    });
     const data = await readJsonResponse<AuthUser & { error?: string }>(res);
-    if (!res.ok) throw new Error(data.error ?? "Registration confirmation failed");
+    if (!res.ok) throw new Error(data.error ?? "Registration failed");
     setUser(data);
     setNeedsSetup(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, needsSetup, login, sendTwoFactorCode, verifyTwoFactor, logout, requestRegistration, confirmRegistration, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, needsSetup, login, sendTwoFactorCode, verifyTwoFactor, logout, register, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

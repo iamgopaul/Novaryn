@@ -233,8 +233,8 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   const method = req.method;
   const sub = segments[0] ?? "";
 
-  // ── POST /auth/register/request ──────────────────────────────────────────
-  if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
+  // ── POST /auth/register (direct registration, no email verification) ───────
+  if (sub === "register" && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = RegisterSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -248,71 +248,16 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     if (existingUsername.length > 0) return errorResponse("Username already taken", 409);
 
     const passwordHash = await hashPassword(parsed.data.password);
-    const code = randomNumericCode(6);
-    const codeHash = await hashCode(code);
-    const expiresAt = addHours(new Date(), 1 / 6);
 
-    const [challenge] = await db.insert(registrationChallenges).values({
+    const [user] = await db.insert(users).values({
       email: parsed.data.email,
       username: normalizedUsername,
       name: parsed.data.name,
       passwordHash,
-      codeHash,
-      expiresAt,
-    }).returning({ id: registrationChallenges.id });
-
-    // Send email async (non-blocking) - don't await
-    sendEmailOtp(parsed.data.email, code, "register").catch((err) => {
-      console.error("[register:email-failed]", parsed.data.email, err);
-    });
-    
-    const destination = maskEmail(parsed.data.email);
-    console.log(`[register:code] ${parsed.data.email} code=${code}`);
-
-    return jsonResponse({
-      ok: true,
-      challengeId: challenge!.id,
-      destination,
-      devCode: !isProduction() ? code : undefined, // Only in dev
-    }, 201);
-  }
-
-  // ── POST /auth/register/confirm ──────────────────────────────────────────
-  if (((sub === "register" && segments[1] === "confirm") || sub === "register-confirm") && method === "POST") {
-    const body = await req.json().catch(() => null);
-    const parsed = RegisterConfirmSchema.safeParse(body);
-    if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
-
-    const [challenge] = await db.select().from(registrationChallenges)
-      .where(and(
-        eq(registrationChallenges.id, parsed.data.challengeId),
-        gt(registrationChallenges.expiresAt, new Date()),
-        isNull(registrationChallenges.usedAt),
-      ))
-      .limit(1);
-    if (!challenge) return errorResponse("Verification challenge not found or expired", 404);
-
-    const codeHash = await hashCode(parsed.data.code);
-    if (codeHash !== challenge.codeHash) return errorResponse("Invalid verification code", 401);
-
-    const [emailExists] = await db.select({ id: users.id }).from(users).where(eq(users.email, challenge.email)).limit(1);
-    if (emailExists) return errorResponse("Email already in use", 409);
-    const [usernameExists] = await db.select({ id: users.id }).from(users).where(eq(users.username, challenge.username)).limit(1);
-    if (usernameExists) return errorResponse("Username already taken", 409);
-
-    const [user] = await db.insert(users).values({
-      email: challenge.email,
-      username: challenge.username,
-      name: challenge.name,
-      passwordHash: challenge.passwordHash,
     }).returning();
 
-    await db.update(registrationChallenges)
-      .set({ usedAt: new Date() })
-      .where(eq(registrationChallenges.id, challenge.id));
-
-    // Create a personal org/workspace for this user (strict isolation by default)
-    const [personalOrg] = await db.insert(orgs).values({ name: `${challenge.name}'s Workspace` }).returning();
+    // Create a personal org/workspace for this user
+    const [personalOrg] = await db.insert(orgs).values({ name: `${parsed.data.name}'s Workspace` }).returning();
     await db.insert(orgMembers).values({ orgId: personalOrg!.id, userId: user!.id, role: "owner" });
 
     const { token, expiresAt } = await createSession(user!.id);
@@ -323,11 +268,6 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
         "Set-Cookie": makeSessionCookie(token, expiresAt),
       },
     });
-  }
-
-  // ── POST /auth/register (legacy) ─────────────────────────────────────────
-  if (sub === "register" && method === "POST") {
-    return errorResponse("Use /auth/register/request then /auth/register/confirm", 400);
   }
 
   // ── POST /auth/login ─────────────────────────────────────────────────────

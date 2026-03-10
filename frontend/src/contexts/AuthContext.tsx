@@ -20,12 +20,6 @@ export type LoginResult = {
   devCode?: string;
 };
 
-export type RegisterRequestResult = {
-  challengeId: string;
-  destination: string;
-  devCode?: string;
-};
-
 export type AuthState = {
   user: AuthUser | null;
   /** True while the initial /auth/me check is in progress */
@@ -36,8 +30,7 @@ export type AuthState = {
   sendTwoFactorCode: (challengeId: string, channel: "email") => Promise<{ destination: string; devCode?: string }>;
   verifyTwoFactor: (challengeId: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
-  requestRegistration: (email: string, username: string, name: string, password: string) => Promise<RegisterRequestResult>;
-  confirmRegistration: (challengeId: string, code: string) => Promise<void>;
+  register: (email: string, username: string, name: string, password: string) => Promise<void>;
   refreshUser: () => Promise<void>;
 };
 
