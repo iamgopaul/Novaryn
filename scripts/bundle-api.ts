@@ -1,17 +1,12 @@
 /**
- * Pre-compile src/ entry points needed by Vercel api/ functions.
- *
- * Vercel compiles api/*.ts to JavaScript but leaves relative imports
- * as runtime require() calls. Node.js can only resolve .js files,
- * not .ts files. This script pre-bundles the src/ entry points so
- * that require("../../src/routes/auth") resolves to a real .js file.
+ * Pre-compile src/ entry points needed by Vercel api/[...path].ts.
+ * Outputs ESM .js bundles so the catch-all function can import them.
  */
 import { dirname } from "node:path";
 
 const entries = [
-  "src/routes/auth.ts",
-  "src/vercel/nodeAdapter.ts",
   "src/app.ts",
+  "src/vercel/nodeAdapter.ts",
 ];
 
 console.log(`Pre-compiling ${entries.length} src/ entry point(s)…`);
@@ -19,7 +14,7 @@ console.log(`Pre-compiling ${entries.length} src/ entry point(s)…`);
 for (const entry of entries) {
   const result = await Bun.build({
     entrypoints: [entry],
-    outdir: dirname(entry),  // e.g. "src/routes" → outputs src/routes/auth.js
+    outdir: dirname(entry),
     target: "node",
     format: "esm",
   });
@@ -30,7 +25,7 @@ for (const entry of entries) {
     }
     process.exit(1);
   }
-  console.log(`  ✓ ${entry} → ${dirname(entry)}/${entry.split("/").pop()!.replace(".ts", ".js")}`);
+  console.log(`  ✓ ${entry}`);
 }
 
 console.log("Done.");
