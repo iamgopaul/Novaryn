@@ -1,3 +1,8 @@
 {
-  "ignoreCommand": "echo 'Root deploy disabled. Set Vercel Root Directory to Novaryn Hub or Services/Novaryn Control Tower.' && exit 0"
+  "installCommand": "bun --cwd 'Novaryn Hub' install",
+  "buildCommand": "bun --cwd 'Novaryn Hub' run build",
+  "outputDirectory": "Novaryn Hub/dist",
+  "rewrites": [
+    { "source": "/((?!assets/|favicon.ico|vite.svg).*)", "destination": "/index.html" }
+  ]
 }
