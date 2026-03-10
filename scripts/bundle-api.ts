@@ -1,13 +1,13 @@
 /**
  * Pre-bundle all Vercel API functions using Bun's built-in bundler.
- * This outputs self-contained CommonJS .js files so Vercel doesn't
- * need to resolve any cross-directory TypeScript imports at runtime.
+ * Outputs self-contained CommonJS .js files so Vercel doesn't need
+ * to resolve any cross-directory TypeScript imports at runtime.
  */
-import { glob } from "bun";
 import { unlink } from "node:fs/promises";
 
+const scanner = new Bun.Glob("api/**/*.ts");
 const entries: string[] = [];
-for await (const file of glob("api/**/*.ts")) {
+for await (const file of scanner.scan(".")) {
   entries.push(file);
 }
 
@@ -18,9 +18,7 @@ const result = await Bun.build({
   outdir: "api",
   target: "node",
   format: "cjs",
-  bundle: true,
-  // Don't bundle these — they're provided by the Vercel runtime
-  external: ["node:*", "node:crypto", "node:util", "node:fs", "node:path", "node:stream", "node:http", "node:https"],
+  external: ["node:*"],
   naming: "[dir]/[name].js",
 });
 
@@ -34,7 +32,7 @@ if (!result.success) {
 // Remove the .ts source files so Vercel uses the bundled .js versions
 for (const file of entries) {
   await unlink(file).catch(() => {});
-  console.log(`  ✓ bundled ${file}`);
+  console.log(`  ✓ ${file}`);
 }
 
-console.log("Done — API functions bundled to CommonJS.");
+console.log("Done.");
