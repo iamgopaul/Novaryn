@@ -1,7 +1,7 @@
 import { randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
-const scrypt = promisify(nodeScrypt);
+const scrypt = promisify(nodeScrypt) as (pw: string, salt: string, len: number, opts: object) => Promise<Buffer>;
 
 const SCRYPT_N = 16_384;
 const SCRYPT_R = 8;
@@ -15,7 +15,7 @@ export async function hashPassword(password: string): Promise<string> {
     r: SCRYPT_R,
     p: SCRYPT_P,
     maxmem: 128 * 1024 * 1024,
-  }) as Buffer;
+  });
   return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${derived.toString("hex")}`;
 }
 
@@ -35,7 +35,7 @@ export async function verifyPassword(password: string, hashed: string): Promise<
     r: Number(r),
     p: Number(p),
     maxmem: 128 * 1024 * 1024,
-  }) as Buffer;
+  });
 
   const stored = Buffer.from(storedHex, "hex");
   if (stored.length !== derived.length) return false;

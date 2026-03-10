@@ -691,8 +691,8 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
       .limit(20);
 
     const filtered = rows
-      .filter((u) => !!u.username && u.id !== auth.user.id)
-      .map((u) => ({ id: u.id, username: u.username!, name: u.name }));
+      .filter((u: typeof rows[number]) => !!u.username && u.id !== auth.user.id)
+      .map((u: typeof rows[number]) => ({ id: u.id, username: u.username!, name: u.name }));
 
     return jsonResponse(filtered);
   }

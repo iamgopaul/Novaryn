@@ -49,7 +49,7 @@ export async function handleExperiments(req: Request, segments: string[]): Promi
 
   // PUT /admin/experiments/:key
   if (req.method === "PUT" && segments.length === 1) {
-    const key = segments[0];
+    const key = segments[0]!;
     const body = await req.json().catch(() => null);
     const parsed = UpdateExperimentSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.message);

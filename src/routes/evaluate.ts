@@ -46,7 +46,7 @@ export async function handleEvaluate(req: Request, scopedProjectId?: string): Pr
     .where(and(eq(flags.envId, envRecord.id), inArray(flags.key, keyList)));
 
   // Load rules for those flags
-  const flagIds = flagRecords.map((f) => f.id);
+  const flagIds = flagRecords.map((f: (typeof flagRecords)[number]) => f.id);
   const rules = flagIds.length > 0
     ? await db.select().from(flagRules).where(inArray(flagRules.flagId, flagIds))
     : [];
@@ -59,7 +59,7 @@ export async function handleEvaluate(req: Request, scopedProjectId?: string): Pr
   }
 
   // Evaluate each flag
-  const results = flagRecords.map((flag) => {
+  const results = flagRecords.map((flag: (typeof flagRecords)[number]) => {
     const flagWithRules = {
       key: flag.key,
       type: flag.type,
