@@ -241,11 +241,18 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
 
     const normalizedUsername = normalizeUsername(parsed.data.username);
 
-    const existing = await db.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
-    if (existing.length > 0) return errorResponse("Email already in use", 409);
-
-    const existingUsername = await db.select({ id: users.id }).from(users).where(eq(users.username, normalizedUsername)).limit(1);
-    if (existingUsername.length > 0) return errorResponse("Username already taken", 409);
+    // Check both email and username in one query
+    const existing = await db.select({ email: users.email, username: users.username })
+      .from(users)
+      .where(or(eq(users.email, parsed.data.email), eq(users.username, normalizedUsername)))
+      .limit(2);
+    
+    if (existing.some(u => u.email === parsed.data.email)) {
+      return errorResponse("Email already in use", 409);
+    }
+    if (existing.some(u => u.username === normalizedUsername)) {
+      return errorResponse("Username already taken", 409);
+    }
 
     const passwordHash = await hashPassword(parsed.data.password);
 

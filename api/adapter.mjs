@@ -8034,7 +8034,7 @@ async function verifyPassword(password, hashed) {
     return false;
   return timingSafeEqual(stored, derived);
 }
-var scrypt, SCRYPT_N = 1024, SCRYPT_R = 8, SCRYPT_P = 1, KEYLEN = 64;
+var scrypt, SCRYPT_N = 256, SCRYPT_R = 8, SCRYPT_P = 1, KEYLEN = 64;
 var init_password = __esm(() => {
   scrypt = promisify(nodeScrypt);
 });
@@ -22020,12 +22020,13 @@ async function handleAuth(req, segments) {
     if (!parsed.success)
       return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
     const normalizedUsername = normalizeUsername(parsed.data.username);
-    const existing = await db2.select().from(users).where(eq(users.email, parsed.data.email)).limit(1);
-    if (existing.length > 0)
+    const existing = await db2.select({ email: users.email, username: users.username }).from(users).where(or(eq(users.email, parsed.data.email), eq(users.username, normalizedUsername))).limit(2);
+    if (existing.some((u) => u.email === parsed.data.email)) {
       return errorResponse("Email already in use", 409);
-    const existingUsername = await db2.select({ id: users.id }).from(users).where(eq(users.username, normalizedUsername)).limit(1);
-    if (existingUsername.length > 0)
+    }
+    if (existing.some((u) => u.username === normalizedUsername)) {
       return errorResponse("Username already taken", 409);
+    }
     const passwordHash = await hashPassword(parsed.data.password);
     const [user] = await db2.insert(users).values({
       email: parsed.data.email,
