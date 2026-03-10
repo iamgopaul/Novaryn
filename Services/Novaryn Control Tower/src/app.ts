@@ -107,6 +107,22 @@ async function handleRequestInternal(req: Request): Promise<Response> {
       return await handleStream(req);
     }
 
+    if (segments[0] === "tools" && segments[1] === "tinylink") {
+      try {
+        const tinyLinkPath = "/" + segments.slice(2).join("/");
+        const tinyLinkUrl = `http://localhost:3001${tinyLinkPath}${url.search}`;
+        const tinyLinkReq = new Request(tinyLinkUrl, {
+          method: req.method,
+          headers: req.headers,
+          body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
+        });
+        return await fetch(tinyLinkReq);
+      } catch (err) {
+        console.error("TinyLink proxy error:", err);
+        return errorResponse("TinyLink service unavailable", 503);
+      }
+    }
+
     if (segments[0] === "admin") {
       const { handleFlags } = await import("./routes/flags");
       const { handleExperiments } = await import("./routes/experiments");
