@@ -9,9 +9,18 @@ if (!connectionString) {
 
 const dbUnavailable = new Proxy({}, {
 	get() {
-		throw new Error("DATABASE_URL is not set");
+		throw new Error("DATABASE_URL is missing or invalid");
 	},
 });
 
-const queryClient = connectionString ? postgres(connectionString) : null;
+let queryClient: ReturnType<typeof postgres> | null = null;
+if (connectionString) {
+	try {
+		queryClient = postgres(connectionString);
+	} catch (error) {
+		console.error("DATABASE_URL failed to initialize postgres client", error);
+		queryClient = null;
+	}
+}
+
 export const db = queryClient ? drizzle(queryClient, { schema }) : (dbUnavailable as any);
