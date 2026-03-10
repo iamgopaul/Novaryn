@@ -1,6 +1,6 @@
 {
   "installCommand": "FRONTEND_DIR=\"\"; for d in . \"Novaryn Hub\" \"../Novaryn Hub\" \"../../Novaryn Hub\"; do if [ -f \"$d/vite.config.ts\" ] && [ -f \"$d/package.json\" ]; then FRONTEND_DIR=\"$d\"; break; fi; done; [ -n \"$FRONTEND_DIR\" ] || { echo \"Unable to locate frontend directory\"; pwd; find . -maxdepth 3 -type d; exit 1; }; cd \"$FRONTEND_DIR\" && bun install",
-  "buildCommand": "FRONTEND_DIR=\"\"; for d in . \"Novaryn Hub\" \"../Novaryn Hub\" \"../../Novaryn Hub\"; do if [ -f \"$d/vite.config.ts\" ] && [ -f \"$d/package.json\" ]; then FRONTEND_DIR=\"$d\"; break; fi; done; [ -n \"$FRONTEND_DIR\" ] || { echo \"Unable to locate frontend directory\"; pwd; find . -maxdepth 3 -type d; exit 1; }; ROOT_DIR=\"$(pwd)\"; cd \"$FRONTEND_DIR\" && bun run build && cd \"$ROOT_DIR\" && rm -rf dist && cp -R \"$FRONTEND_DIR/dist\" dist",
+  "buildCommand": "FRONTEND_DIR=\"\"; for d in . \"Novaryn Hub\" \"../Novaryn Hub\" \"../../Novaryn Hub\"; do if [ -f \"$d/vite.config.ts\" ] && [ -f \"$d/package.json\" ]; then FRONTEND_DIR=\"$d\"; break; fi; done; [ -n \"$FRONTEND_DIR\" ] || { echo \"Unable to locate frontend directory\"; pwd; find . -maxdepth 3 -type d; exit 1; }; ROOT_DIR=\"$(pwd)\"; cd \"$FRONTEND_DIR\" && bun run build && cd \"$ROOT_DIR\" && if [ \"$FRONTEND_DIR\" != \".\" ]; then rm -rf dist && cp -R \"$FRONTEND_DIR/dist\" dist; fi",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!assets/|favicon.ico|vite.svg).*)", "destination": "/index.html" }
