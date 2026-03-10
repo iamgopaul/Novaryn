@@ -9,17 +9,25 @@ export default function EnvProvider({ children }: { children: ReactNode }) {
   const [selectedEnv, setSelectedEnv] = useState<Environment | null>(null);
 
   function load() {
-    Promise.all([api.projects.list(), api.environments.list()]).then(([projs, envs]) => {
-      setProjects(projs);
-      setEnvironments(envs);
-      setSelectedProject((prev) => prev ?? projs[0] ?? null);
-      setSelectedEnv((prev) => {
-        if (prev) return prev;
-        const firstProj = projs[0];
-        if (!firstProj) return null;
-        return envs.find((e) => e.projectId === firstProj.id) ?? null;
+    Promise.all([api.projects.list(), api.environments.list()])
+      .then(([projs, envs]) => {
+        setProjects(projs);
+        setEnvironments(envs);
+        setSelectedProject((prev) => prev ?? projs[0] ?? null);
+        setSelectedEnv((prev) => {
+          if (prev) return prev;
+          const firstProj = projs[0];
+          if (!firstProj) return null;
+          return envs.find((e) => e.projectId === firstProj.id) ?? null;
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to load projects/environments:", error);
+        setProjects([]);
+        setEnvironments([]);
+        setSelectedProject(null);
+        setSelectedEnv(null);
       });
-    });
   }
 
   useEffect(() => { load(); }, []);

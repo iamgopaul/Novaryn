@@ -1,4 +1,7 @@
 import { getSessionUser, ROLE_LEVELS, type AuthUser } from "./session";
+import { db } from "../db/client";
+import { users, orgMembers } from "../db/schema";
+import { eq } from "drizzle-orm";
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
@@ -7,25 +10,80 @@ export type { AuthUser };
 /**
  * Resolves the caller identity from either:
  *  1. A valid session cookie / session Bearer token → session user + org role
- *  2. The ADMIN_API_KEY Bearer token → synthetic owner user (backward compat)
+ *  2. The ADMIN_API_KEY Bearer token → owner/member user from DB
  * Returns null if neither matches.
  */
 export async function getAuthUser(req: Request): Promise<AuthUser | null> {
   const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
 
-  // Legacy admin key → synthetic owner (keeps existing API integrations working)
+  // Legacy admin key → map to a real DB user so UUID-based queries don't fail.
   if (ADMIN_API_KEY && bearer === ADMIN_API_KEY) {
-    return {
-      id: "admin",
-      email: "admin",
-      username: null,
-      phone: null,
-      name: "admin",
-      orgId: "admin",
-      role: "owner",
-      twoFactorEnabled: false,
-      twoFactorMethod: "either",
-    };
+    try {
+      const [owner] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          phone: users.phone,
+          name: users.name,
+          orgId: orgMembers.orgId,
+          role: orgMembers.role,
+          twoFactorEnabled: users.twoFactorEnabled,
+          twoFactorMethod: users.twoFactorMethod,
+        })
+        .from(users)
+        .innerJoin(orgMembers, eq(orgMembers.userId, users.id))
+        .where(eq(orgMembers.role, "owner"))
+        .limit(1);
+
+      if (owner) {
+        return {
+          id: owner.id,
+          email: owner.email,
+          username: owner.username ?? null,
+          phone: owner.phone ?? null,
+          name: owner.name,
+          orgId: owner.orgId,
+          role: owner.role,
+          twoFactorEnabled: owner.twoFactorEnabled ?? false,
+          twoFactorMethod: owner.twoFactorMethod ?? "either",
+        };
+      }
+
+      const [member] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          username: users.username,
+          phone: users.phone,
+          name: users.name,
+          orgId: orgMembers.orgId,
+          role: orgMembers.role,
+          twoFactorEnabled: users.twoFactorEnabled,
+          twoFactorMethod: users.twoFactorMethod,
+        })
+        .from(users)
+        .innerJoin(orgMembers, eq(orgMembers.userId, users.id))
+        .limit(1);
+
+      if (member) {
+        return {
+          id: member.id,
+          email: member.email,
+          username: member.username ?? null,
+          phone: member.phone ?? null,
+          name: member.name,
+          orgId: member.orgId,
+          role: member.role,
+          twoFactorEnabled: member.twoFactorEnabled ?? false,
+          twoFactorMethod: member.twoFactorMethod ?? "either",
+        };
+      }
+    } catch (error) {
+      console.error("Failed to resolve ADMIN_API_KEY user:", (error as Error)?.message);
+    }
+
+    return null;
   }
 
   return getSessionUser(req);

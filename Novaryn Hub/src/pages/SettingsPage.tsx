@@ -81,7 +81,7 @@ export default function SettingsPage() {
         steps={SETTINGS_STEPS}
       />
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 className="text-xl font-semibold">Settings</h1>
       </div>
 
@@ -204,7 +204,7 @@ export default function SettingsPage() {
         <div className="border border-gray-800 bg-gray-900 rounded-lg divide-y divide-gray-800">
           {team.length === 0 && <p className="text-xs text-gray-600 p-4">No team members yet.</p>}
           {team.map((m) => (
-            <div key={m.id} className="flex items-center justify-between px-4 py-3 gap-3">
+            <div key={m.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-6 h-6 rounded-full bg-indigo-800 flex items-center justify-center text-xs font-bold text-white uppercase shrink-0">
                   {m.name[0]}
@@ -214,7 +214,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-500 truncate">{m.email}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
                 {isAdmin && m.role !== "owner" && m.id !== currentUser?.id ? (
                   <select
                     value={m.role}

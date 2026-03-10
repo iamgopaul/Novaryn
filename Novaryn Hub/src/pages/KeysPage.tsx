@@ -77,7 +77,7 @@ export default function KeysPage() {
         steps={KEYS_STEPS}
       />
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold">SDK Keys</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -121,8 +121,8 @@ export default function KeysPage() {
         {keys.map((k) => {
           const peeked = peekedId === k.id;
           return (
-            <div key={k.id} className="border border-gray-800 bg-gray-900 rounded-lg px-4 py-3">
-              <div className="flex items-center justify-between gap-4">
+              <div key={k.id} className="border border-gray-800 bg-gray-900 rounded-lg px-4 py-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{k.name}</span>
@@ -146,7 +146,7 @@ export default function KeysPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   <button
                     onClick={() => setPeekedId(peeked ? null : k.id)}
                     className={`text-xs px-2.5 py-1.5 rounded border transition-colors ${

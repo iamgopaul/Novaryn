@@ -85,7 +85,7 @@ export default function AuditPage() {
         steps={AUDIT_STEPS}
       />
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 className="text-xl font-semibold">Audit Log</h1>
         <div className="flex items-center gap-2">
           <button
@@ -106,13 +106,13 @@ export default function AuditPage() {
       {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
           value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Search resource or action…"
           className="input flex-1 text-sm"
         />
-        <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="input w-36 text-sm">
+        <select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} className="input w-full sm:w-36 text-sm">
           <option value="all">All actions</option>
           <option value="create">Creates</option>
           <option value="update">Updates</option>
@@ -124,14 +124,14 @@ export default function AuditPage() {
         {filtered.length === 0 && <p className="text-gray-500 text-sm">No entries match.</p>}
         {filtered.map((entry) => (
           <div key={entry.id} className="border border-gray-800 bg-gray-900 rounded-lg px-4 py-3 text-sm">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
               <div className="flex items-center gap-2 min-w-0">
                 <span className={`shrink-0 text-xs font-mono px-1.5 py-0.5 rounded ${actionColor(entry.action)}`}>
                   {entry.action}
                 </span>
                 <span className="text-gray-300 font-mono truncate">{entry.resource}</span>
               </div>
-              <div className="shrink-0 text-right" title={new Date(entry.createdAt).toISOString()}>
+              <div className="shrink-0 text-left sm:text-right" title={new Date(entry.createdAt).toISOString()}>
                 <span className="text-gray-400 text-xs">{relativeTime(entry.createdAt, now)}</span>
                 <div className="text-gray-600 text-xs">{formatFull(entry.createdAt)}</div>
               </div>

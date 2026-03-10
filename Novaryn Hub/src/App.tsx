@@ -15,16 +15,18 @@ import RegisterPage from "./pages/RegisterPage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { getProfileCustomization, subscribeProfileCustomization, type ThemeId } from "./utils/profileCustomization";
+import PageErrorBoundary from "./components/PageErrorBoundary";
 
-type HubTab = "home" | "services" | "products" | "tools" | "settings";
+type HubTab = "home" | "services" | "projects" | "team-collab" | "community" | "about-us" | "settings";
 type ControlTowerTab = "flags" | "experiments" | "audit" | "keys" | "settings";
 
 const HUB_TABS: { id: HubTab; label: string }[] = [
   { id: "home", label: "Home" },
   { id: "services", label: "Services" },
-  { id: "products", label: "Products" },
-  { id: "tools", label: "Tools" },
-  { id: "settings", label: "Settings" },
+  { id: "projects", label: "Projects" },
+  { id: "team-collab", label: "Team Collab" },
+  { id: "community", label: "Community" },
+  { id: "about-us", label: "About Us" },
 ];
 
 const CONTROLTOWER_TABS: { id: ControlTowerTab; label: string }[] = [
@@ -46,8 +48,13 @@ function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boo
   }
 
   if (segment === "services") return { hubTab: "services", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "products") return { hubTab: "products", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "tools") return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "project") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "projects") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "products") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "tools") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "community") return { hubTab: "community", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "settings") return { hubTab: "settings", showControlTower: false, controlTowerTab: "flags" };
 
   if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
@@ -116,46 +123,6 @@ function AppInner() {
           </span>
         </button>
 
-        {/* Project + Env selectors (shown for ControlTower service) */}
-        {showControlTower && (
-        <div className="order-3 sm:order-none w-full sm:w-auto flex items-center gap-2 py-2 sm:py-4 sm:mr-6 sm:pr-6 sm:border-r border-gray-800 overflow-x-auto">
-          <select
-            value={selectedProject?.id ?? ""}
-            onChange={(e) => {
-              const p = projects.find((p) => p.id === e.target.value);
-              if (p) setSelectedProject(p);
-            }}
-            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer min-w-0"
-          >
-            {projects.length === 0 && <option value="">No projects</option>}
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-
-          <span className="text-gray-600">/</span>
-
-          <select
-            value={selectedEnv?.id ?? ""}
-            onChange={(e) => {
-              const env = envsForProject.find((ev) => ev.id === e.target.value);
-              if (env) setSelectedEnv(env);
-            }}
-            className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm focus:outline-none focus:border-indigo-500 cursor-pointer min-w-0"
-            style={{ colorScheme: "dark" }}
-          >
-            {envsForProject.length === 0 && <option value="">No environments</option>}
-            {envsForProject.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
-            ))}
-          </select>
-
-          {selectedEnv && (
-            <span className={`text-xs px-1.5 py-0.5 rounded border font-mono ${envColor(selectedEnv.name)}`}>
-              {selectedEnv.name}
-            </span>
-          )}
-        </div>
-        )}
-
         {/* Hub nav */}
         <nav className="order-4 sm:order-none w-full sm:w-auto sm:ml-12 sm:mt-1 flex overflow-x-auto">
           {HUB_TABS.map((t) => (
@@ -174,15 +141,55 @@ function AppInner() {
         </nav>
 
         {/* User menu */}
-        <UserMenu />
+        <UserMenu onOpenSettings={() => setHubTab("settings")} />
       </header>
 
       {showControlTower && (
         <div className="border-b border-gray-800 px-3 sm:px-6">
-          <div className="max-w-6xl mx-auto flex items-center gap-3 py-2 overflow-x-auto">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2 overflow-x-auto">
             <span className="text-xs text-purple-300 border border-purple-800 bg-purple-900/20 rounded px-2 py-1 whitespace-nowrap">
               Service: Novaryn Control Tower
             </span>
+
+            <div className="flex items-center gap-2 whitespace-nowrap">
+              <select
+                value={selectedProject?.id ?? ""}
+                onChange={(e) => {
+                  const project = projects.find((projectItem) => projectItem.id === e.target.value);
+                  if (project) setSelectedProject(project);
+                }}
+                className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer min-w-0"
+              >
+                {projects.length === 0 && <option value="">No projects</option>}
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>{project.name}</option>
+                ))}
+              </select>
+
+              <span className="text-gray-600">/</span>
+
+              <select
+                value={selectedEnv?.id ?? ""}
+                onChange={(e) => {
+                  const env = envsForProject.find((envItem) => envItem.id === e.target.value);
+                  if (env) setSelectedEnv(env);
+                }}
+                className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-indigo-500 cursor-pointer min-w-0"
+                style={{ colorScheme: "dark" }}
+              >
+                {envsForProject.length === 0 && <option value="">No environments</option>}
+                {envsForProject.map((env) => (
+                  <option key={env.id} value={env.id}>{env.name}</option>
+                ))}
+              </select>
+
+              {selectedEnv && (
+                <span className={`text-xs px-1.5 py-0.5 rounded border font-mono ${envColor(selectedEnv.name)}`}>
+                  {selectedEnv.name}
+                </span>
+              )}
+            </div>
+
             {CONTROLTOWER_TABS.map((t) => (
               <button
                 key={t.id}
@@ -201,6 +208,7 @@ function AppInner() {
       )}
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <PageErrorBoundary>
         {hubTab === "home" && <HomePage onNavigate={onLegacyNavigate} />}
 
         {hubTab === "services" && !showControlTower && (
@@ -234,21 +242,36 @@ function AppInner() {
           </>
         )}
 
-        {hubTab === "products" && (
+        {hubTab === "projects" && (
           <div className="max-w-3xl border border-gray-800 bg-gray-900 rounded-lg p-4">
-            <h1 className="text-xl font-semibold mb-2">Products</h1>
-            <p className="text-sm text-gray-400">This hub section is ready for your product-level dashboards.</p>
+            <h1 className="text-xl font-semibold mb-2">Projects</h1>
+            <p className="text-sm text-gray-400">This tab is ready for project planning, milestones, and delivery tracking.</p>
           </div>
         )}
 
-        {hubTab === "tools" && (
+        {hubTab === "team-collab" && (
           <div className="max-w-3xl border border-gray-800 bg-gray-900 rounded-lg p-4">
-            <h1 className="text-xl font-semibold mb-2">Tools</h1>
-            <p className="text-sm text-gray-400">This hub section is ready for utility dashboards and internal tooling.</p>
+            <h1 className="text-xl font-semibold mb-2">Team Collab</h1>
+            <p className="text-sm text-gray-400">This tab is ready for team collaboration workflows, updates, and shared activity.</p>
+          </div>
+        )}
+
+        {hubTab === "community" && (
+          <div className="max-w-3xl border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <h1 className="text-xl font-semibold mb-2">Community</h1>
+            <p className="text-sm text-gray-400">This tab is ready for community discussions, announcements, and shared resources.</p>
+          </div>
+        )}
+
+        {hubTab === "about-us" && (
+          <div className="max-w-3xl border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <h1 className="text-xl font-semibold mb-2">About Us</h1>
+            <p className="text-sm text-gray-400">This tab is ready for your company overview, mission, and team story.</p>
           </div>
         )}
 
         {hubTab === "settings" && <HubSettingsPage />}
+        </PageErrorBoundary>
       </main>
     </div>
   );
@@ -365,7 +388,7 @@ function AuthGate() {
 }
 
 /** User avatar + dropdown in the header. */
-function UserMenu() {
+function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
@@ -422,6 +445,12 @@ function UserMenu() {
               <p className="text-xs font-medium text-gray-200 truncate">{user.name}</p>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
             </div>
+            <button
+              onClick={() => { setOpen(false); onOpenSettings(); }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
+            >
+              Settings
+            </button>
             <button
               onClick={async () => { setOpen(false); await logout(); window.location.href = "/login"; }}
               className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors"
