@@ -328,18 +328,22 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
 
   // ── POST /auth/login ─────────────────────────────────────────────────────
   if (sub === "login" && method === "POST") {
+    console.log("[login] Starting login flow");
     const body = await req.json().catch(() => null);
+    console.log("[login] Body parsed");
     const parsed = LoginSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
 
     const identifier = parsed.data.identifier.trim();
     const normalized = normalizeUsername(identifier);
 
+    console.log("[login] Querying user:", identifier);
     const [user] = await db
       .select()
       .from(users)
       .where(or(ilike(users.email, identifier), eq(users.username, normalized)))
       .limit(1);
+    console.log("[login] User query complete:", user ? "found" : "not found");
     if (!user) return errorResponse("Invalid username/email or password", 401);
 
     const valid = await verifyPassword(parsed.data.password, user.passwordHash);
