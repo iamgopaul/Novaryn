@@ -19,13 +19,19 @@ let queryClient: ReturnType<typeof neon> | ReturnType<typeof postgres> | null = 
 if (connectionString) {
 	try {
 		const isPoolerUrl = connectionString.includes("-pooler.");
+		// Neon HTTP driver is for pooler URLs (serverless)
+		// postgres-js is for direct connections (traditional TCP)
 		queryClient = isPoolerUrl
-			? postgres(connectionString, {
+			? neon(connectionString, {
+				fetchOptions: {
+					cache: 'no-store',
+				},
+			})
+			: postgres(connectionString, {
 				max: 5,
 				connect_timeout: 5,
 				idle_timeout: 20,
-			})
-			: neon(connectionString);
+			});
 	} catch (error) {
 		console.error("DATABASE_URL failed to initialize postgres client", error);
 		queryClient = null;
@@ -34,6 +40,6 @@ if (connectionString) {
 
 export const db = queryClient
 	? (connectionString?.includes("-pooler.")
-		? drizzlePostgres(queryClient as ReturnType<typeof postgres>, { schema })
-		: drizzle(queryClient as ReturnType<typeof neon>, { schema }))
+		? drizzle(queryClient as ReturnType<typeof neon>, { schema })
+		: drizzlePostgres(queryClient as ReturnType<typeof postgres>, { schema }))
 	: (dbUnavailable as any);
