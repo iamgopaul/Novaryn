@@ -274,16 +274,23 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
       expiresAt,
     }).returning({ id: registrationChallenges.id });
 
-    // Send verification email
+    // Send verification email (required in production)
     const delivered = await sendEmailOtp(parsed.data.email, code, "register");
     const destination = maskEmail(parsed.data.email);
-    if (!delivered) console.log(`[register] ${parsed.data.email} code=${code}`);
-    const includeDevCode = !isProduction() || !delivered;
+
+    if (!delivered && isProduction()) {
+      await db.delete(registrationChallenges).where(eq(registrationChallenges.id, challenge!.id));
+      return errorResponse("Could not send verification email. Please try again.", 502);
+    }
+
+    if (!delivered) {
+      console.log(`[register] ${parsed.data.email} code=${code}`);
+    }
 
     return jsonResponse({
       challengeId: challenge!.id,
       destination,
-      ...(includeDevCode ? { devCode: code } : {}),
+      ...(!isProduction() ? { devCode: code } : {}),
     }, 201);
   }
 
@@ -352,54 +359,9 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     });
   }
 
-  // ── POST /auth/register (direct registration, no email verification) ───────
+  // ── POST /auth/register (disabled; must use verification flow) ────────────
   if (sub === "register" && method === "POST") {
-    const body = await req.json().catch(() => null);
-    const parsed = RegisterSchema.safeParse(body);
-    if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
-
-    const normalizedUsername = normalizeUsername(parsed.data.username);
-
-    // Use separate point lookups to avoid slow OR queries on serverless Postgres.
-    const existingByEmail = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, parsed.data.email))
-      .limit(1);
-    if (existingByEmail.length > 0) {
-      return errorResponse("Email already in use", 409);
-    }
-
-    const existingByUsername = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.username, normalizedUsername))
-      .limit(1);
-    if (existingByUsername.length > 0) {
-      return errorResponse("Username already taken", 409);
-    }
-
-    const passwordHash = await hashPassword(parsed.data.password);
-
-    const [user] = await db.insert(users).values({
-      email: parsed.data.email,
-      username: normalizedUsername,
-      name: parsed.data.name,
-      passwordHash,
-    }).returning();
-
-    // Create a personal org/workspace for this user
-    const [personalOrg] = await db.insert(orgs).values({ name: `${parsed.data.name}'s Workspace` }).returning();
-    await db.insert(orgMembers).values({ orgId: personalOrg!.id, userId: user!.id, role: "owner" });
-
-    const { token, expiresAt } = await createSession(user!.id);
-    return new Response(JSON.stringify(safeUser(user!, "owner")), {
-      status: 201,
-      headers: {
-        "Content-Type": "application/json",
-        "Set-Cookie": makeSessionCookie(token, expiresAt),
-      },
-    });
+    return errorResponse("Email verification required. Use /auth/register/request first.", 400);
   }
 
   // ── POST /auth/login ─────────────────────────────────────────────────────
