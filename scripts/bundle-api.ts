@@ -1,38 +1,36 @@
 /**
- * Pre-bundle all Vercel API functions using Bun's built-in bundler.
- * Outputs self-contained CommonJS .js files so Vercel doesn't need
- * to resolve any cross-directory TypeScript imports at runtime.
+ * Pre-compile src/ entry points needed by Vercel api/ functions.
+ *
+ * Vercel compiles api/*.ts to JavaScript but leaves relative imports
+ * as runtime require() calls. Node.js can only resolve .js files,
+ * not .ts files. This script pre-bundles the src/ entry points so
+ * that require("../../src/routes/auth") resolves to a real .js file.
  */
-import { unlink } from "node:fs/promises";
+import { dirname } from "node:path";
 
-const scanner = new Bun.Glob("api/**/*.ts");
-const entries: string[] = [];
-for await (const file of scanner.scan(".")) {
-  entries.push(file);
-}
+const entries = [
+  "src/routes/auth.ts",
+  "src/vercel/nodeAdapter.ts",
+  "src/app.ts",
+];
 
-console.log(`Bundling ${entries.length} API function(s)…`);
+console.log(`Pre-compiling ${entries.length} src/ entry point(s)…`);
 
-const result = await Bun.build({
-  entrypoints: entries,
-  outdir: "api",
-  target: "node",
-  format: "cjs",
-  external: ["node:*"],
-  naming: "[dir]/[name].js",
-});
+for (const entry of entries) {
+  const result = await Bun.build({
+    entrypoints: [entry],
+    outdir: dirname(entry),  // e.g. "src/routes" → outputs src/routes/auth.js
+    target: "node",
+    format: "cjs",
+  });
 
-if (!result.success) {
-  for (const log of result.logs) {
-    console.error(log);
+  if (!result.success) {
+    for (const log of result.logs) {
+      console.error(log);
+    }
+    process.exit(1);
   }
-  process.exit(1);
-}
-
-// Remove the .ts source files so Vercel uses the bundled .js versions
-for (const file of entries) {
-  await unlink(file).catch(() => {});
-  console.log(`  ✓ ${file}`);
+  console.log(`  ✓ ${entry} → ${dirname(entry)}/${entry.split("/").pop()!.replace(".ts", ".js")}`);
 }
 
 console.log("Done.");
