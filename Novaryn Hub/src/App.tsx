@@ -17,12 +17,13 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { getProfileCustomization, subscribeProfileCustomization, type ThemeId } from "./utils/profileCustomization";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 
-type HubTab = "home" | "services" | "projects" | "team-collab" | "community" | "about-us" | "settings";
+type HubTab = "home" | "services" | "tools" | "projects" | "team-collab" | "community" | "about-us" | "settings";
 type ControlTowerTab = "flags" | "experiments" | "audit" | "keys" | "settings";
 
 const HUB_TABS: { id: HubTab; label: string }[] = [
   { id: "home", label: "Home" },
   { id: "services", label: "Services" },
+  { id: "tools", label: "Tools" },
   { id: "projects", label: "Projects" },
   { id: "team-collab", label: "Team Collab" },
   { id: "community", label: "Community" },
@@ -48,11 +49,11 @@ function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boo
   }
 
   if (segment === "services") return { hubTab: "services", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "tools") return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "project") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "projects") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "products") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "tools") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "community") return { hubTab: "community", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "settings") return { hubTab: "settings", showControlTower: false, controlTowerTab: "flags" };
@@ -246,6 +247,53 @@ function AppInner() {
           <div className="max-w-3xl border border-gray-800 bg-gray-900 rounded-lg p-4">
             <h1 className="text-xl font-semibold mb-2">Projects</h1>
             <p className="text-sm text-gray-400">This tab is ready for project planning, milestones, and delivery tracking.</p>
+          </div>
+        )}
+
+        {hubTab === "tools" && (
+          <div className="max-w-4xl">
+            <h1 className="text-xl font-semibold mb-4">Tools</h1>
+
+            <div className="border border-cyan-800/70 bg-gray-900 rounded-lg p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🔗</span>
+                    <h2 className="text-base font-semibold text-cyan-300">TinyLink</h2>
+                    <span className="text-[11px] px-2 py-0.5 rounded border border-cyan-800 bg-cyan-900/30 text-cyan-300">Integrated</span>
+                  </div>
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    Lightweight URL shortener built with Bun + TypeScript, PostgreSQL, and Drizzle ORM.
+                  </p>
+                </div>
+                <span className="text-xs text-gray-500">Project type: Internal Tool</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <div className="border border-gray-800 rounded-md p-3 bg-gray-950/40">
+                  <p className="text-xs text-gray-500 mb-1">Core Endpoints</p>
+                  <ul className="space-y-1 text-xs text-gray-300 font-mono">
+                    <li>POST /links</li>
+                    <li>GET /r/:slug</li>
+                    <li>GET /links/:slug</li>
+                    <li>GET /links/:slug/analytics</li>
+                  </ul>
+                </div>
+                <div className="border border-gray-800 rounded-md p-3 bg-gray-950/40">
+                  <p className="text-xs text-gray-500 mb-1">Quick Start</p>
+                  <ul className="space-y-1 text-xs text-gray-300 font-mono">
+                    <li>cd /Users/iamgopaul/tinylink</li>
+                    <li>bun install</li>
+                    <li>bun run db:push</li>
+                    <li>bun run dev</li>
+                  </ul>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                Local default URL: <span className="font-mono text-gray-400">http://localhost:3000</span>
+              </p>
+            </div>
           </div>
         )}
 
