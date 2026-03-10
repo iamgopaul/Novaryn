@@ -238,6 +238,14 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     return jsonResponse({ pong: true, received: body, timestamp: Date.now() });
   }
 
+  // DEBUG: POST with DB read test
+  if (sub === "dbtest" && method === "POST") {
+    const start = Date.now();
+    const result = await db.select({ id: users.id }).from(users).limit(1);
+    const duration = Date.now() - start;
+    return jsonResponse({ dbWorks: true, userCount: result.length, durationMs: duration });
+  }
+
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
