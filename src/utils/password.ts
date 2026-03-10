@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 
 const scrypt = promisify(nodeScrypt) as (pw: string, salt: string, len: number, opts: object) => Promise<Buffer>;
 
-const SCRYPT_N = 16_384;
+const SCRYPT_N = 1024;  // Reduced for Edge runtime performance (was 16384)
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const KEYLEN = 64;
