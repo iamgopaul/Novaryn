@@ -21,7 +21,7 @@ for (const entry of entries) {
     entrypoints: [entry],
     outdir: dirname(entry),  // e.g. "src/routes" → outputs src/routes/auth.js
     target: "node",
-    format: "cjs",
+    format: "esm",
   });
 
   if (!result.success) {
