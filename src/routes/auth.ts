@@ -408,11 +408,23 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     const normalized = normalizeUsername(identifier);
 
     console.log("[login] Querying user:", identifier);
-    const [user] = await db
+    // Try email first (case-insensitive), then username if not found
+    // Avoiding or() +ilike() which timeout with Neon HTTP driver
+    let userResult = await db
       .select()
       .from(users)
-      .where(or(ilike(users.email, identifier), eq(users.username, normalized)))
+      .where(eq(users.email, identifier.toLowerCase()))
       .limit(1);
+    
+    if (userResult.length === 0) {
+      userResult = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, normalized))
+        .limit(1);
+    }
+    
+    const user = userResult[0];
     console.log("[login] User query complete:", user ? "found" : "not found");
     if (!user) return errorResponse("Invalid username/email or password", 401);
 
