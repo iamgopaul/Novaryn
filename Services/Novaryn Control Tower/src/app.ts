@@ -16,23 +16,33 @@ function resolveCorsOrigin(req: Request): string | null {
   const origin = req.headers.get("origin");
   if (!origin) return null;
 
-  if ((process.env.NODE_ENV ?? "development") !== "production") {
-    try {
-      const parsed = new URL(origin);
-      if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-        return origin;
-      }
-    } catch {
-      // Ignore malformed origin and continue with explicit allowlist checks.
+  const isProduction = (process.env.NODE_ENV ?? "development") === "production";
+
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname;
+    const isLocalHost = host === "localhost" || host === "127.0.0.1";
+
+    if (!isProduction && isLocalHost) {
+      return origin;
     }
-  }
 
-  const allowedOrigins = getAllowedOrigins();
-  if (allowedOrigins.length === 0) {
-    return (process.env.NODE_ENV ?? "development") === "production" ? null : origin;
-  }
+    const allowedOrigins = getAllowedOrigins();
+    if (allowedOrigins.length > 0) {
+      return allowedOrigins.includes(origin) ? origin : null;
+    }
 
-  return allowedOrigins.includes(origin) ? origin : null;
+    if (!isProduction) {
+      return origin;
+    }
+
+    const isNovarynWeb = host === "novaryn.dev" || host.endsWith(".novaryn.dev");
+    const isPreview = host.endsWith(".vercel.app") && host.includes("novaryn");
+
+    return (isNovarynWeb || isPreview) ? origin : null;
+  } catch {
+    return null;
+  }
 }
 
 function applyCors(req: Request, response: Response): Response {
