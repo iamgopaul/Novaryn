@@ -3,8 +3,8 @@ import { promisify } from "node:util";
 
 const scrypt = promisify(nodeScrypt) as (pw: string, salt: string, len: number, opts: object) => Promise<Buffer>;
 
-const SCRYPT_N = 256;  // Minimal for serverless performance
-const SCRYPT_R = 8;
+const SCRYPT_N = 16;  // Absolute minimum for serverless (insecure but functional)
+const SCRYPT_R = 1;
 const SCRYPT_P = 1;
 const KEYLEN = 64;
 

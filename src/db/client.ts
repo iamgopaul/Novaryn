@@ -2,8 +2,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-// Use postgres-js with POOLER connection for serverless
-const connectionString = process.env.DATABASE_URL;
+// Use postgres-js with DIRECT (unpooled) connection for better serverless performance
+const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 
 if (!connectionString) {
 	console.error("[DB] DATABASE_URL not set");

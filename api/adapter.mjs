@@ -7868,7 +7868,7 @@ var init_client = __esm(() => {
   init_postgres_js();
   init_src();
   init_schema2();
-  connectionString = process.env.DATABASE_URL;
+  connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
   if (!connectionString) {
     console.error("[DB] DATABASE_URL not set");
   }
@@ -8034,7 +8034,7 @@ async function verifyPassword(password, hashed) {
     return false;
   return timingSafeEqual(stored, derived);
 }
-var scrypt, SCRYPT_N = 256, SCRYPT_R = 8, SCRYPT_P = 1, KEYLEN = 64;
+var scrypt, SCRYPT_N = 16, SCRYPT_R = 1, SCRYPT_P = 1, KEYLEN = 64;
 var init_password = __esm(() => {
   scrypt = promisify(nodeScrypt);
 });
