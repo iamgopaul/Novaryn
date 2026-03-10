@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Project } from "../api";
 import PageGuide from "../components/PageGuide";
+import { apiUrl } from "../http";
 
 const KEYS_STEPS = [
   {
@@ -50,16 +51,17 @@ export default function KeysPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/admin/sdk-keys", { headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY ?? "meridiankey"}` } }).then((r) => r.json()) as Promise<SdkKey[]>,
+      fetch(apiUrl("/admin/sdk-keys"), { headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY ?? "meridiankey"}` }, credentials: "include" }).then((r) => r.json()) as Promise<SdkKey[]>,
       api.projects.list(),
     ]).then(([k, p]) => { setKeys(k); setProjects(p); }).catch((e) => setError(e.message));
   }, []);
 
   async function revoke(id: string, name: string) {
     if (!confirm(`Revoke key "${name}"? Apps using it will immediately lose access.`)) return;
-    await fetch(`/admin/sdk-keys/${id}`, {
+    await fetch(apiUrl(`/admin/sdk-keys/${id}`), {
       method: "DELETE",
       headers: { Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY ?? "meridiankey"}` },
+      credentials: "include",
     });
     setKeys((prev) => prev.filter((k) => k.id !== id));
   }
@@ -226,12 +228,13 @@ function CreateKeyModal({ projects, onClose, onCreated }: {
     e.preventDefault();
     setLoading(true); setError("");
     try {
-      const res = await fetch("/admin/sdk-keys", {
+      const res = await fetch(apiUrl("/admin/sdk-keys"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_ADMIN_API_KEY ?? "meridiankey"}`,
         },
+        credentials: "include",
         body: JSON.stringify({ name, projectId }),
       });
       const data = await res.json() as SdkKey & { error?: string };

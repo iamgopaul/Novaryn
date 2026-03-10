@@ -4,7 +4,49 @@ function getBearerToken(req: Request): string | null {
   return req.headers.get("authorization")?.replace("Bearer ", "").trim() ?? null;
 }
 
-export async function handleRequest(req: Request): Promise<Response> {
+function getAllowedOrigins(): string[] {
+  const raw = process.env.CORS_ORIGINS ?? process.env.FRONTEND_ORIGIN ?? "";
+  return raw
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function resolveCorsOrigin(req: Request): string | null {
+  const origin = req.headers.get("origin");
+  if (!origin) return null;
+
+  const allowedOrigins = getAllowedOrigins();
+  if (allowedOrigins.length === 0) {
+    return (process.env.NODE_ENV ?? "development") === "production" ? null : origin;
+  }
+
+  return allowedOrigins.includes(origin) ? origin : null;
+}
+
+function applyCors(req: Request, response: Response): Response {
+  const corsOrigin = resolveCorsOrigin(req);
+  if (!corsOrigin) return response;
+
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", corsOrigin);
+  headers.set("Access-Control-Allow-Credentials", "true");
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  headers.set("Vary", "Origin");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+async function handleRequestInternal(req: Request): Promise<Response> {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204 });
+  }
+
   const url = new URL(req.url);
   const path = url.pathname.replace(/\/$/, "");
   const segments = path.split("/").filter(Boolean);
@@ -72,4 +114,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     });
     return errorResponse("Internal server error", 500);
   }
+}
+
+export async function handleRequest(req: Request): Promise<Response> {
+  const response = await handleRequestInternal(req);
+  return applyCors(req, response);
 }

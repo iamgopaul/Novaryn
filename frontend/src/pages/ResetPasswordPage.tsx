@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { AuthShell } from "./LoginPage";
+import { apiUrl } from "../http";
 
 /** Shown at /reset-password (request) or /reset-password/:token (confirm) */
 export default function ResetPasswordPage({ token }: { token?: string }) {
@@ -23,7 +24,7 @@ function RequestReset() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/auth/reset-password", {
+      const res = await fetch(apiUrl("/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier }),
@@ -54,7 +55,7 @@ function RequestReset() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/auth/reset-password/confirm", {
+      const res = await fetch(apiUrl("/auth/reset-password/confirm"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ challengeId, code, password: newPassword }),
@@ -178,7 +179,7 @@ function ConfirmReset({ token }: { token: string }) {
     if (password !== confirm) { setError("Passwords do not match"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/auth/reset-password/confirm", {
+      const res = await fetch(apiUrl("/auth/reset-password/confirm"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),

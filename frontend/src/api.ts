@@ -1,3 +1,5 @@
+import { apiUrl } from "./http";
+
 const API_KEY = import.meta.env.VITE_ADMIN_API_KEY as string | undefined;
 
 /** Build default headers. Session cookie is sent automatically via `credentials: include`.
@@ -67,7 +69,7 @@ export type ReceivedProjectInvite = {
 };
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     credentials: "include",
     ...init,
     headers: { ...defaultHeaders(), ...init?.headers },

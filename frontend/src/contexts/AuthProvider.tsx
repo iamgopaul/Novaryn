@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { AuthContext, type AuthUser, type LoginResult } from "./AuthContext";
+import { apiUrl } from "../http";
 
 async function readJsonResponse<T>(res: Response): Promise<T> {
   const text = await res.text();
@@ -19,7 +20,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch("/auth/me", { credentials: "include", signal });
+      const res = await fetch(apiUrl("/auth/me"), { credentials: "include", signal });
       if (!res.ok) { setUser(null); return; }
       const data = await readJsonResponse<{ user: AuthUser | null; needsSetup: boolean }>(res);
       setUser(data.user);
@@ -41,7 +42,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshUser]);
 
   async function login(identifier: string, password: string, channel?: "email"): Promise<LoginResult> {
-    const res = await fetch("/auth/login", {
+    const res = await fetch(apiUrl("/auth/login"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -58,7 +59,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function sendTwoFactorCode(challengeId: string, channel: "email") {
-    const res = await fetch("/auth/2fa-send", {
+    const res = await fetch(apiUrl("/auth/2fa-send"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -70,7 +71,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function verifyTwoFactor(challengeId: string, code: string) {
-    const res = await fetch("/auth/2fa-verify", {
+    const res = await fetch(apiUrl("/auth/2fa-verify"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -83,12 +84,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await fetch("/auth/logout", { method: "POST", credentials: "include" });
+    await fetch(apiUrl("/auth/logout"), { method: "POST", credentials: "include" });
     setUser(null);
   }
 
   async function register(email: string, username: string, name: string, password: string) {
-    const res = await fetch("/auth/register", {
+    const res = await fetch(apiUrl("/auth/register"), {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

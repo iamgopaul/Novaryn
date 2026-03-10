@@ -62,10 +62,37 @@ export async function getSessionUser(req: Request): Promise<AuthUser | null> {
 /** Create an httpOnly session cookie string. */
 export function makeSessionCookie(token: string, expiresAt: Date): string {
   const expires = expiresAt.toUTCString();
-  return `sid=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`;
+  const sameSite = (process.env.COOKIE_SAMESITE ?? "Lax").trim();
+  const explicitSecure = process.env.COOKIE_SECURE;
+  const secure = explicitSecure
+    ? explicitSecure === "true"
+    : sameSite.toLowerCase() === "none" || (process.env.NODE_ENV ?? "development") === "production";
+  const domain = process.env.COOKIE_DOMAIN?.trim();
+
+  const parts = [
+    `sid=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    `SameSite=${sameSite}`,
+    `Expires=${expires}`,
+  ];
+  if (secure) parts.push("Secure");
+  if (domain) parts.push(`Domain=${domain}`);
+
+  return parts.join("; ");
 }
 
 /** Create a cookie that clears an existing session. */
 export function clearSessionCookie(): string {
-  return "sid=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+  const sameSite = (process.env.COOKIE_SAMESITE ?? "Lax").trim();
+  const explicitSecure = process.env.COOKIE_SECURE;
+  const secure = explicitSecure
+    ? explicitSecure === "true"
+    : sameSite.toLowerCase() === "none" || (process.env.NODE_ENV ?? "development") === "production";
+  const domain = process.env.COOKIE_DOMAIN?.trim();
+
+  const parts = ["sid=", "Path=/", "HttpOnly", `SameSite=${sameSite}`, "Max-Age=0"];
+  if (secure) parts.push("Secure");
+  if (domain) parts.push(`Domain=${domain}`);
+  return parts.join("; ");
 }

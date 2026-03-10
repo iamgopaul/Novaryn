@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { AuthShell } from "./LoginPage";
+import { apiUrl } from "../http";
 
 type InviteInfo = { email: string; role: string; orgName: string };
 
@@ -17,7 +18,7 @@ export default function InviteAcceptPage({ token }: { token: string }) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    fetch(`/auth/invite/${token}`, { credentials: "include" })
+    fetch(apiUrl(`/auth/invite/${token}`), { credentials: "include" })
       .then((r) => {
         if (!r.ok) { setNotFound(true); return null; }
         return r.json() as Promise<InviteInfo>;
@@ -32,7 +33,7 @@ export default function InviteAcceptPage({ token }: { token: string }) {
     if (password !== confirm) { setError("Passwords do not match"); return; }
     setLoading(true);
     try {
-      const res = await fetch("/auth/invite/accept", {
+      const res = await fetch(apiUrl("/auth/invite/accept"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
