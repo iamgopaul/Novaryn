@@ -2,15 +2,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-// Use postgres-js with DIRECT (unpooled) connection for serverless
-// TCP to pooler has latency issues in serverless environments
-const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+// Use postgres-js with POOLER connection for serverless (faster connection establishment)
+const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-	console.error("[DB] Neither DATABASE_URL_UNPOOLED nor DATABASE_URL is set");
-} else {
-	const isUnpooled = !connectionString.includes("-pooler.");
-	console.log(`[DB] Using ${isUnpooled ? "direct (unpooled)" : "pooler"} connection`);
+	console.error("[DB] DATABASE_URL not set");
 }
 
 const dbUnavailable = new Proxy({}, {
