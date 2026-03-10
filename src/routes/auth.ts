@@ -261,16 +261,19 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
       expiresAt,
     }).returning({ id: registrationChallenges.id });
 
-    const delivered = await sendEmailOtp(parsed.data.email, code, "register");
+    // Send email async (non-blocking) - don't await
+    sendEmailOtp(parsed.data.email, code, "register").catch((err) => {
+      console.error("[register:email-failed]", parsed.data.email, err);
+    });
+    
     const destination = maskEmail(parsed.data.email);
-    if (!delivered) console.log(`[register:email] ${parsed.data.email} code=${code}`);
-    const includeDevCode = !isProduction() || !delivered;
+    console.log(`[register:code] ${parsed.data.email} code=${code}`);
 
     return jsonResponse({
       ok: true,
       challengeId: challenge!.id,
       destination,
-      ...(includeDevCode ? { devCode: code } : {}),
+      devCode: !isProduction() ? code : undefined, // Only in dev
     }, 201);
   }
 
