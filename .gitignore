@@ -4,6 +4,7 @@ node_modules
 # output
 out
 dist
+api/lib  # generated during Vercel build (cp -r src api/lib)
 *.tgz
 
 # code coverage
