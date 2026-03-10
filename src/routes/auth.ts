@@ -98,7 +98,7 @@ async function sendEmailOtp(to: string, code: string, purpose: "login" | "recove
       : `Your Novaryn verification code is ${code}. It expires in 10 minutes.`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
+  const timeout = setTimeout(() => controller.abort(), 5000);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -261,15 +261,16 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
       expiresAt,
     }).returning({ id: registrationChallenges.id });
 
-    // Skip email sending to stay under 10s Vercel timeout - return code in response
+    const delivered = await sendEmailOtp(parsed.data.email, code, "register");
     const destination = maskEmail(parsed.data.email);
-    console.log(`[register:code] ${parsed.data.email} code=${code}`);
+    if (!delivered) console.log(`[register:email] ${parsed.data.email} code=${code}`);
+    const includeDevCode = !isProduction() || !delivered;
 
     return jsonResponse({
       ok: true,
       challengeId: challenge!.id,
       destination,
-      devCode: code, // Always include code until async email system is implemented
+      ...(includeDevCode ? { devCode: code } : {}),
     }, 201);
   }
 
