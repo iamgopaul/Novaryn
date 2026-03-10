@@ -28,7 +28,10 @@ export default class PageErrorBoundary extends React.Component<Props, State> {
         <h1 className="text-lg font-semibold text-red-300 mb-2">This tab failed to load</h1>
         <p className="text-sm text-red-200/90 mb-3">{this.state.message}</p>
         <button
-          onClick={() => window.location.assign("/novaryn")}
+          onClick={() => {
+            window.history.pushState({}, "", "/novaryn");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
           className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded"
         >
           Go Home

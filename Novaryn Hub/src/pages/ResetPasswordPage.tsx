@@ -2,6 +2,11 @@ import { useState, type FormEvent } from "react";
 import { AuthShell } from "./LoginPage";
 import { apiUrl } from "../http";
 
+function navigate(path: string, state?: Record<string, unknown>) {
+  window.history.pushState(state ?? {}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 /** Shown at /reset-password (request) or /reset-password/:token (confirm) */
 export default function ResetPasswordPage({ token }: { token?: string }) {
   return token ? <ConfirmReset token={token} /> : <RequestReset />;
@@ -77,7 +82,13 @@ function RequestReset() {
           If an account was found, your recovery request was processed.
         </p>
         <p className="text-center text-xs text-gray-600 mt-4">
-          <a href="/login" className="text-indigo-400 hover:underline">Back to login</a>
+          <button
+            type="button"
+            onClick={() => navigate("/login", { authView: "login" })}
+            className="text-indigo-400 hover:underline"
+          >
+            Back to login
+          </button>
         </p>
       </AuthShell>
     );
@@ -159,7 +170,13 @@ function RequestReset() {
           {loading ? "Sending…" : "Send recovery code"}
         </button>
         <p className="text-center text-xs text-gray-600">
-          <a href="/login" className="text-indigo-400 hover:underline">Back to login</a>
+          <button
+            type="button"
+            onClick={() => navigate("/login", { authView: "login" })}
+            className="text-indigo-400 hover:underline"
+          >
+            Back to login
+          </button>
         </p>
       </form>
     </AuthShell>
@@ -198,12 +215,13 @@ function ConfirmReset({ token }: { token: string }) {
     return (
       <AuthShell title="Password updated">
         <p className="text-sm text-gray-400 text-center mb-4">Your password has been changed.</p>
-        <a
-          href="/login"
+        <button
+          type="button"
+          onClick={() => navigate("/login", { authView: "login" })}
           className="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded text-sm"
         >
           Sign in
-        </a>
+        </button>
       </AuthShell>
     );
   }

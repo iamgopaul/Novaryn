@@ -3,6 +3,11 @@ import { useAuth } from "../contexts/AuthContext";
 import { AuthShell } from "./LoginPage";
 import { apiUrl } from "../http";
 
+function navigate(path: string, state?: Record<string, unknown>) {
+  window.history.pushState(state ?? {}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 type InviteInfo = { email: string; role: string; orgName: string };
 
 export default function InviteAcceptPage({ token }: { token: string }) {
@@ -65,7 +70,13 @@ export default function InviteAcceptPage({ token }: { token: string }) {
       <AuthShell title="Welcome to Novaryn!">
         <p className="text-sm text-gray-400 text-center">
           Your account is ready.{" "}
-          <a href="/" className="text-indigo-400 hover:underline">Go to dashboard →</a>
+          <button
+            type="button"
+            onClick={() => navigate("/novaryn")}
+            className="text-indigo-400 hover:underline"
+          >
+            Go to dashboard →
+          </button>
         </p>
       </AuthShell>
     );

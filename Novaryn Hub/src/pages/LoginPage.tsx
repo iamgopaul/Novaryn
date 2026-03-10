@@ -1,6 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
+function navigate(path: string, state?: Record<string, unknown>) {
+  window.history.pushState(state ?? {}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export default function LoginPage() {
   const { login, sendTwoFactorCode, verifyTwoFactor } = useAuth();
   const [identifier, setIdentifier] = useState("");
@@ -165,7 +170,13 @@ export default function LoginPage() {
         </button>
         <p className="text-center text-xs text-gray-600">
           Forgot your password?{" "}
-          <a href="/reset-password" className="text-indigo-400 hover:underline">Reset it</a>
+          <button
+            type="button"
+            onClick={() => navigate("/reset-password", { authView: "login" })}
+            className="text-indigo-400 hover:underline"
+          >
+            Reset it
+          </button>
         </p>
       </form>
     </AuthShell>
