@@ -1,11 +1,3 @@
-import { handleFlags } from "./routes/flags";
-import { handleExperiments } from "./routes/experiments";
-import { handleEvaluate } from "./routes/evaluate";
-import { handleStream } from "./routes/stream";
-import { handleAudit } from "./routes/audit";
-import { handleAdmin } from "./routes/admin";
-import { handleSdkKeys, resolveSdkKey } from "./routes/sdkKeys";
-import { handleAuth } from "./routes/auth";
 import { errorResponse, jsonResponse } from "./middleware/errorHandler";
 
 function getBearerToken(req: Request): string | null {
@@ -25,10 +17,13 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     if (segments[0] === "auth") {
+      const { handleAuth } = await import("./routes/auth");
       return await handleAuth(req, segments.slice(1));
     }
 
     if (path === "/evaluate" && req.method === "GET") {
+      const { handleEvaluate } = await import("./routes/evaluate");
+      const { resolveSdkKey } = await import("./routes/sdkKeys");
       const token = getBearerToken(req);
       if (token?.startsWith("ct_")) {
         const sdk = await resolveSdkKey(token);
@@ -39,6 +34,8 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     if (path === "/stream" && req.method === "GET") {
+      const { handleStream } = await import("./routes/stream");
+      const { resolveSdkKey } = await import("./routes/sdkKeys");
       const token = getBearerToken(req);
       if (token?.startsWith("ct_")) {
         const sdk = await resolveSdkKey(token);
@@ -48,6 +45,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
 
     if (segments[0] === "admin") {
+      const { handleFlags } = await import("./routes/flags");
+      const { handleExperiments } = await import("./routes/experiments");
+      const { handleAudit } = await import("./routes/audit");
+      const { handleSdkKeys } = await import("./routes/sdkKeys");
+      const { handleAdmin } = await import("./routes/admin");
       const resource = segments[1];
       const rest = segments.slice(2);
 
