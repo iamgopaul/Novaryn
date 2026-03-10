@@ -97,21 +97,30 @@ async function sendEmailOtp(to: string, code: string, purpose: "login" | "recove
       ? `Your Novaryn recovery code is ${code}. It expires in 10 minutes.`
       : `Your Novaryn verification code is ${code}. It expires in 10 minutes.`;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromEmail,
-      to: [to],
-      subject,
-      text,
-    }),
-  });
-
-  return res.ok;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [to],
+        subject,
+        text,
+      }),
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch (error) {
+    console.error("sendEmailOtp failed:", error);
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function deliverOtp(
