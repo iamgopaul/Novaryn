@@ -18,7 +18,7 @@ type HubTab = "home" | "services" | "products" | "tools" | "settings";
 type ControlTowerTab = "flags" | "experiments" | "audit" | "keys" | "settings";
 
 const HUB_TABS: { id: HubTab; label: string }[] = [
-  { id: "home", label: "Home" },
+  { id: "home", label: "Novaryn" },
   { id: "services", label: "Services" },
   { id: "products", label: "Products" },
   { id: "tools", label: "Tools" },
@@ -35,10 +35,11 @@ const CONTROLTOWER_TABS: { id: ControlTowerTab; label: string }[] = [
 
 function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boolean; controlTowerTab: ControlTowerTab } {
   const clean = pathname.replace(/^\//, "");
-  const [segment, subSegment] = clean.split("/");
+  const [segment, subSegment, thirdSegment] = clean.split("/");
 
-  if (segment === "controltower") {
-    const controlTowerTab = (CONTROLTOWER_TABS.find((t) => t.id === subSegment)?.id ?? "flags") as ControlTowerTab;
+  if ((segment === "services" && subSegment === "novaryn-control-tower") || segment === "controltower") {
+    const tabSegment = segment === "controltower" ? subSegment : thirdSegment;
+    const controlTowerTab = (CONTROLTOWER_TABS.find((t) => t.id === tabSegment)?.id ?? "flags") as ControlTowerTab;
     return { hubTab: "services", showControlTower: true, controlTowerTab };
   }
 
@@ -46,6 +47,8 @@ function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boo
   if (segment === "products") return { hubTab: "products", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "tools") return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags" };
   if (segment === "settings") return { hubTab: "settings", showControlTower: false, controlTowerTab: "flags" };
+
+  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
 
   return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
 }
@@ -58,14 +61,14 @@ function AppInner() {
   const { projects, selectedProject, setSelectedProject, envsForProject, selectedEnv, setSelectedEnv } = useEnv();
 
   const setHubTab = (next: HubTab) => {
-    const path = next === "home" ? "/" : `/${next}`;
+    const path = next === "home" ? "/novaryn" : `/${next}`;
     window.history.pushState({ hubTab: next, showControlTower: false }, "", path);
     setHubTabState(next);
     setShowControlTower(false);
   };
 
   const openControlTower = (next: ControlTowerTab = "flags") => {
-    const path = next === "flags" ? "/controltower" : `/controltower/${next}`;
+    const path = next === "flags" ? "/services/novaryn-control-tower" : `/services/novaryn-control-tower/${next}`;
     window.history.pushState({ hubTab: "services", showControlTower: true, controlTowerTab: next }, "", path);
     setHubTabState("services");
     setShowControlTower(true);
@@ -73,7 +76,7 @@ function AppInner() {
   };
 
   const setControlTowerTab = (next: ControlTowerTab) => {
-    const path = next === "flags" ? "/controltower" : `/controltower/${next}`;
+    const path = next === "flags" ? "/services/novaryn-control-tower" : `/services/novaryn-control-tower/${next}`;
     window.history.pushState({ hubTab: "services", showControlTower: true, controlTowerTab: next }, "", path);
     setControlTowerTabState(next);
   };
@@ -173,7 +176,7 @@ function AppInner() {
         <div className="border-b border-gray-800 px-3 sm:px-6">
           <div className="max-w-6xl mx-auto flex items-center gap-3 py-2 overflow-x-auto">
             <span className="text-xs text-purple-300 border border-purple-800 bg-purple-900/20 rounded px-2 py-1 whitespace-nowrap">
-              Service: Novaryn ControlTower
+              Service: Novaryn Control Tower
             </span>
             {CONTROLTOWER_TABS.map((t) => (
               <button
@@ -205,7 +208,7 @@ function AppInner() {
               >
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-lg">🏁</span>
-                  <span className="font-medium text-sm">Novaryn ControlTower</span>
+                  <span className="font-medium text-sm">Novaryn Control Tower</span>
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed mb-3">
                   Feature flags, experiments, audit logs, SDK keys, and environment controls.

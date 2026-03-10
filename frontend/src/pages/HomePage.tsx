@@ -254,7 +254,7 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">🏁</span>
-                <span className="font-medium text-sm">Novaryn ControlTower</span>
+                  <span className="font-medium text-sm">Novaryn Control Tower</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed mb-3">
                 Feature flags, experiments, audit logs, SDK keys, and environment controls.
