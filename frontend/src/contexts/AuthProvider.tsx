@@ -58,7 +58,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function sendTwoFactorCode(challengeId: string, channel: "email") {
-    const res = await fetch("/auth/2fa/send", {
+    const res = await fetch("/auth/2fa-send", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -70,7 +70,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function verifyTwoFactor(challengeId: string, code: string) {
-    const res = await fetch("/auth/2fa/verify", {
+    const res = await fetch("/auth/2fa-verify", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -88,7 +88,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function requestRegistration(email: string, username: string, name: string, password: string): Promise<RegisterRequestResult> {
-    const res = await fetch("/auth/register/request", {
+    const res = await fetch("/auth/register-request", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -100,7 +100,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function confirmRegistration(challengeId: string, code: string) {
-    const res = await fetch("/auth/register/confirm", {
+    const res = await fetch("/auth/register-confirm", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

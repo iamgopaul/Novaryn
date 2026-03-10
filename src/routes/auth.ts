@@ -234,7 +234,7 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   const sub = segments[0] ?? "";
 
   // ── POST /auth/register/request ──────────────────────────────────────────
-  if (sub === "register" && segments[1] === "request" && method === "POST") {
+  if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = RegisterSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -275,7 +275,7 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   }
 
   // ── POST /auth/register/confirm ──────────────────────────────────────────
-  if (sub === "register" && segments[1] === "confirm" && method === "POST") {
+  if (((sub === "register" && segments[1] === "confirm") || sub === "register-confirm") && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = RegisterConfirmSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -388,7 +388,7 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   }
 
   // ── POST /auth/2fa/send ────────────────────────────────────────────────
-  if (sub === "2fa" && segments[1] === "send" && method === "POST") {
+  if (((sub === "2fa" && segments[1] === "send") || sub === "2fa-send") && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = TwoFactorSendSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -430,7 +430,7 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   }
 
   // ── POST /auth/2fa/verify ───────────────────────────────────────────────
-  if (sub === "2fa" && segments[1] === "verify" && method === "POST") {
+  if (((sub === "2fa" && segments[1] === "verify") || sub === "2fa-verify") && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = TwoFactorVerifySchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -539,7 +539,7 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   }
 
   // ── POST /auth/invite/accept ─────────────────────────────────────────────
-  if (sub === "invite" && segments[1] === "accept" && method === "POST") {
+  if (((sub === "invite" && segments[1] === "accept") || sub === "invite-accept") && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = AcceptInviteSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -638,7 +638,7 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
   }
 
   // ── POST /auth/reset-password/confirm ────────────────────────────────────
-  if (sub === "reset-password" && segments[1] === "confirm" && method === "POST") {
+  if (((sub === "reset-password" && segments[1] === "confirm") || sub === "reset-password-confirm") && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = ResetConfirmSchema.safeParse(body);
     if (!parsed.success) return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
