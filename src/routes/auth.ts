@@ -290,6 +290,18 @@ export async function handleAuth(req: Request, segments: string[]): Promise<Resp
     return jsonResponse({ queryWorks: true, found: !!user, durationMs: duration });
   }
 
+  // DEBUG: Test simple eq query (without or/ilike)
+  if (sub === "simplequery" && method === "POST") {
+    const start = Date.now();
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "test@example.com"))
+      .limit(1);
+    const duration = Date.now() - start;
+    return jsonResponse({ simpleQueryWorks: true, found: !!user, durationMs: duration });
+  }
+
   // ── POST /auth/register/request ──────────────────────────────────────────
   if (((sub === "register" && segments[1] === "request") || sub === "register-request") && method === "POST") {
     const body = await req.json().catch(() => null);
