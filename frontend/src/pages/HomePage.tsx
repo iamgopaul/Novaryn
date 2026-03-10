@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 type Tab = "flags" | "experiments" | "audit" | "keys" | "settings";
+type SubDashboard = "products" | "services" | "features" | "tools";
 
 export default function HomePage({ onNavigate }: { onNavigate?: (tab: Tab) => void }) {
   const { user } = useAuth();
@@ -191,6 +193,7 @@ if (flags.find(f => f.key === "dark_mode")?.value) {
 function Dashboard({ user, onNavigate }: { user: { name: string; role: string }; onNavigate: (tab: Tab) => void }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const [subDashboard, setSubDashboard] = useState<SubDashboard>("services");
 
   return (
     <div className="max-w-3xl">
@@ -204,140 +207,146 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
         </p>
       </div>
 
-      {/* Workspace options */}
       <section className="mb-10">
         <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Workspace</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {[
-            {
-              tab: "home" as Tab,
-              title: "Products",
-              icon: "📦",
-              desc: "Organize your product portfolio and group related capabilities by product line.",
-              action: "Coming soon",
-              disabled: true,
-              color: "border-gray-800",
-            },
-            {
-              tab: "flags" as Tab,
-              title: "Services",
-              icon: "🧩",
-              desc: "Manage service applications in your workspace and launch into each service dashboard.",
-              action: "View services ↓",
-              color: "border-indigo-800 hover:border-indigo-600",
-            },
-            {
-              tab: "home" as Tab,
-              title: "Features",
-              icon: "✨",
-              desc: "Track and structure features across services for planning, rollout, and ownership.",
-              action: "Coming soon",
-              disabled: true,
-              color: "border-gray-800",
-            },
-            {
-              tab: "home" as Tab,
-              title: "Tools",
-              icon: "🛠",
-              desc: "Access workspace tools and automation utilities that support your teams.",
-              action: "Coming soon",
-              disabled: true,
-              color: "border-gray-800",
-            },
-            {
-              tab: "flags" as Tab,
-              title: "Novaryn ControlTower",
-              icon: "🏁",
-              desc: "Service: feature flags, experiments, audit logs, SDK keys, and environment controls.",
-              action: "Open service →",
-              color: "border-purple-800 hover:border-purple-600",
-            },
-            {
-              tab: "keys" as Tab,
-              title: "SDK Keys",
-              icon: "⚿",
-              desc: "Generate project-scoped keys for your apps. Each key can only read flags — never write them.",
-              action: "Manage keys →",
-              color: "border-yellow-800 hover:border-yellow-600",
-            },
-            {
-              tab: "settings" as Tab,
-              title: "Settings",
-              icon: "⚙",
-              desc: "Create projects and environments (dev, staging, prod). Invite team members and manage roles.",
-              action: "Open settings →",
-              color: "border-gray-700 hover:border-gray-500",
-            },
-          ].map((card) => (
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {([
+            { id: "products", label: "Products" },
+            { id: "services", label: "Services" },
+            { id: "features", label: "Features" },
+            { id: "tools", label: "Tools" },
+          ] as Array<{ id: SubDashboard; label: string }>).map((item) => (
             <button
-              key={card.title}
-              onClick={() => !card.disabled && onNavigate(card.tab)}
-              disabled={card.disabled}
-              className={`border ${card.color} bg-gray-900 rounded-lg p-4 text-left transition-colors group disabled:opacity-70 disabled:cursor-default`}
+              key={item.id}
+              onClick={() => setSubDashboard(item.id)}
+              className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                subDashboard === item.id
+                  ? "bg-indigo-900/40 border-indigo-700 text-indigo-300"
+                  : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200"
+              }`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">{card.icon}</span>
-                <span className="font-medium text-sm">{card.title}</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">{card.desc}</p>
-              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">{card.action}</span>
+              {item.label}
             </button>
           ))}
         </div>
-      </section>
 
-      {/* How it works — condensed */}
-      <section className="mb-10">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">How it works</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {[
-            {
-              step: "1",
-              title: "Create a flag",
-              desc: "Define a feature flag with a key like new_checkout. Set its default value and environment.",
-            },
-            {
-              step: "2",
-              title: "Add targeting rules",
-              desc: "Roll out to 10% of users, allowlist specific user IDs, or turn it on for everyone.",
-            },
-            {
-              step: "3",
-              title: "Evaluate in your app",
-              desc: "Call /evaluate with a user ID. Get back the flag value instantly — zero redeploys.",
-            },
-          ].map((s) => (
-            <div key={s.step} className="border border-gray-800 bg-gray-900 rounded-lg p-4">
-              <div className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center mb-3">
-                {s.step}
+        {subDashboard === "products" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">📦</span>
+                <span className="font-medium text-sm">Product Portfolio</span>
               </div>
-              <h3 className="font-medium text-sm mb-1">{s.title}</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Audit */}
-      <section>
-        <button
-          onClick={() => onNavigate("audit")}
-          className="w-full border border-gray-800 hover:border-gray-700 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">📋</span>
-                <span className="font-medium text-sm">Audit Log</span>
-                <span className="text-xs bg-green-900/30 text-green-400 border border-green-800 px-1.5 py-0.5 rounded animate-pulse">Live</span>
-              </div>
-              <p className="text-xs text-gray-500">
-                Every flag change, rule update, and key creation is logged with who made it and when. Streams in real time.
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                Organize product lines and map services, features, and tools to each product.
               </p>
+              <span className="text-xs text-gray-500">Coming soon</span>
             </div>
-            <span className="text-xs text-indigo-400 group-hover:text-indigo-300 shrink-0 ml-4">View log →</span>
           </div>
-        </button>
+        )}
+
+        {subDashboard === "services" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => onNavigate("flags")}
+              className="border border-purple-800 hover:border-purple-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🏁</span>
+                <span className="font-medium text-sm">Novaryn ControlTower</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                Feature flags, experiments, audit logs, SDK keys, and environment controls.
+              </p>
+              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open service →</span>
+            </button>
+
+            <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🧩</span>
+                <span className="font-medium text-sm">Service Catalog</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                Add more Novaryn services here as your platform evolves.
+              </p>
+              <span className="text-xs text-gray-500">Coming soon</span>
+            </div>
+          </div>
+        )}
+
+        {subDashboard === "features" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => onNavigate("flags")}
+              className="border border-indigo-800 hover:border-indigo-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">⚑</span>
+                <span className="font-medium text-sm">Feature Flags</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">Create and target runtime flags for controlled rollouts.</p>
+              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Manage flags →</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate("experiments")}
+              className="border border-purple-800 hover:border-purple-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">⚗</span>
+                <span className="font-medium text-sm">Experiments</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">Run A/B tests with weighted variants and deterministic assignment.</p>
+              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open experiments →</span>
+            </button>
+          </div>
+        )}
+
+        {subDashboard === "tools" && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => onNavigate("keys")}
+              className="border border-yellow-800 hover:border-yellow-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">⚿</span>
+                <span className="font-medium text-sm">SDK Keys</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">Create project-scoped keys for client and server evaluation calls.</p>
+              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Manage keys →</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate("settings")}
+              className="border border-gray-700 hover:border-gray-500 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">⚙</span>
+                <span className="font-medium text-sm">Settings</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-3">Manage projects, environments, users, invitations, and security options.</p>
+              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open settings →</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate("audit")}
+              className="sm:col-span-2 border border-gray-800 hover:border-gray-700 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">📋</span>
+                    <span className="font-medium text-sm">Audit Log</span>
+                    <span className="text-xs bg-green-900/30 text-green-400 border border-green-800 px-1.5 py-0.5 rounded">Live</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Track all sensitive changes across flags, rules, experiments, keys, and team actions.</p>
+                </div>
+                <span className="text-xs text-indigo-400 group-hover:text-indigo-300 shrink-0 ml-4">View log →</span>
+              </div>
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
