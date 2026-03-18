@@ -1,5 +1,5 @@
 {
-  "installCommand": "bun install --cwd \"Novaryn Hub\" && bun install --cwd \"Services/Novaryn Control Tower\"",
+  "installCommand": "bash -lc 'if [ -d \"Novaryn Hub\" ]; then bun install --cwd \"Novaryn Hub\" && bun install --cwd \"Services/Novaryn Control Tower\"; else bun install && bun install --cwd \"../Services/Novaryn Control Tower\"; fi'",
   "buildCommand": "bun run --cwd \"Services/Novaryn Control Tower\" bundle:api && bash vercel-build.sh",
   "outputDirectory": "dist",
   "functions": {
