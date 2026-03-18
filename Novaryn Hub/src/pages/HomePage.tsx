@@ -287,11 +287,19 @@ function Dashboard({
 
         {activeSection === "tools" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2 border border-gray-800 bg-gray-900 rounded-lg p-4">
-              <p className="text-xs text-gray-500 leading-relaxed">
-                The tools tab mirrors the top navigation and currently has no active tools.
+            <button
+              onClick={() => onNavigate("tools")}
+              className="sm:col-span-2 border border-cyan-800/70 hover:border-cyan-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-lg">🛠️</span>
+                <span className="font-medium text-sm">Developer Utilities</span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed mb-2">
+                JSON Studio, URL Workbench, and Hash Generator are now available in the Tools tab.
               </p>
-            </div>
+              <span className="text-xs text-cyan-400 group-hover:text-cyan-300">Open tools →</span>
+            </button>
           </div>
         )}
 

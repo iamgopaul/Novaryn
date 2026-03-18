@@ -179,6 +179,11 @@ async function handleRequestInternal(req: Request): Promise<Response> {
       return errorResponse("DevBoard service unavailable", 503);
     }
 
+    if (segments[0] === "tools") {
+      const { handleTools } = await import("./routes/tools");
+      return await handleTools(req, segments.slice(1));
+    }
+
     if (segments[0] === "admin") {
       const { handleFlags } = await import("./routes/flags");
       const { handleExperiments } = await import("./routes/experiments");

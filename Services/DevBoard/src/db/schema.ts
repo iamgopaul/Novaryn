@@ -1,6 +1,6 @@
 import { integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
-export const projects = pgTable("projects", {
+export const projects = pgTable("devboard_projects", {
   id: uuid("id").primaryKey().defaultRandom(),
   owner_user_id: text("owner_user_id").notNull(),
   name: varchar("name", { length: 100 }).notNull(),
@@ -10,7 +10,7 @@ export const projects = pgTable("projects", {
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const boards = pgTable("boards", {
+export const boards = pgTable("devboard_boards", {
   id: uuid("id").primaryKey().defaultRandom(),
   project_id: uuid("project_id")
     .notNull()
@@ -19,7 +19,7 @@ export const boards = pgTable("boards", {
   created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const columns = pgTable("columns", {
+export const columns = pgTable("devboard_columns", {
   id: uuid("id").primaryKey().defaultRandom(),
   board_id: uuid("board_id")
     .notNull()
@@ -30,7 +30,7 @@ export const columns = pgTable("columns", {
   created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const cards = pgTable("cards", {
+export const cards = pgTable("devboard_cards", {
   id: uuid("id").primaryKey().defaultRandom(),
   board_id: uuid("board_id")
     .notNull()

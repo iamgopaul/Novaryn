@@ -165,3 +165,12 @@ export const registrationChallenges = pgTable("registration_challenges", {
   usedAt: timestamp("used_at", tsz),
   createdAt: timestamp("created_at", tsz).defaultNow().notNull(),
 });
+
+export const toolRuns = pgTable("tool_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  toolKey: text("tool_key").notNull(),
+  inputText: text("input_text").notNull(),
+  outputText: text("output_text").notNull(),
+  createdAt: timestamp("created_at", tsz).defaultNow().notNull(),
+});

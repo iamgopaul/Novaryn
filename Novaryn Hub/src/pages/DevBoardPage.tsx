@@ -31,6 +31,8 @@ type DevBoardData = {
   columns: DevBoardColumn[];
 };
 
+const DEVBOARD_API_PREFIX = "/api/services/devboard";
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(apiUrl(path), {
     credentials: "include",
@@ -41,9 +43,16 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  let data: unknown = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text };
+    }
+  }
   if (!response.ok) {
-    throw new Error((data as { error?: string })?.error ?? "Request failed");
+    throw new Error((data as { error?: string })?.error ?? `Request failed (${response.status})`);
   }
   return data as T;
 }
@@ -70,7 +79,7 @@ export default function DevBoardPage() {
     setLoading(true);
     setError("");
     try {
-      const rows = await requestJson<DevBoardProject[]>("/services/devboard/projects");
+      const rows = await requestJson<DevBoardProject[]>(`${DEVBOARD_API_PREFIX}/projects`);
       setProjects(rows);
       const selectedId = nextSelectedId ?? selectedProjectId ?? rows[0]?.id ?? "";
       setSelectedProjectId(selectedId);
@@ -91,8 +100,8 @@ export default function DevBoardPage() {
     }
     try {
       const [boardData, summaryData] = await Promise.all([
-        requestJson<DevBoardData>(`/services/devboard/boards/${project.board_id}`),
-        requestJson<DevBoardSummary>(`/services/devboard/projects/${project.id}/summary`),
+        requestJson<DevBoardData>(`${DEVBOARD_API_PREFIX}/boards/${project.board_id}`),
+        requestJson<DevBoardSummary>(`${DEVBOARD_API_PREFIX}/projects/${project.id}/summary`),
       ]);
       setBoard(boardData);
       setSummary(summaryData);
@@ -123,7 +132,7 @@ export default function DevBoardPage() {
     setCreating(true);
     setError("");
     try {
-      const result = await requestJson<{ project: { id: string } }>("/services/devboard/projects", {
+      const result = await requestJson<{ project: { id: string } }>(`${DEVBOARD_API_PREFIX}/projects`, {
         method: "POST",
         body: JSON.stringify({
           name: createName.trim(),

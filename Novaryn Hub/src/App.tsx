@@ -15,11 +15,15 @@ import RegisterPage from "./pages/RegisterPage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DevBoardPage from "./pages/DevBoardPage";
+import JsonStudioTool from "./pages/tools/JsonStudioTool";
+import UrlWorkbenchTool from "./pages/tools/UrlWorkbenchTool";
+import HashGeneratorTool from "./pages/tools/HashGeneratorTool";
 import { getProfileCustomization, subscribeProfileCustomization, type ThemeId } from "./utils/profileCustomization";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 
 type HubTab = "home" | "services" | "tools" | "projects" | "team-collab" | "community" | "about-us" | "settings";
 type ControlTowerTab = "flags" | "experiments" | "audit" | "keys" | "settings";
+type ToolId = "json-studio" | "url-workbench" | "hash-generator";
 
 const HUB_TABS: { id: HubTab; label: string }[] = [
   { id: "home", label: "Home" },
@@ -39,10 +43,33 @@ const CONTROLTOWER_TABS: { id: ControlTowerTab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
+const TOOLS: { id: ToolId; name: string; icon: string; description: string }[] = [
+  {
+    id: "json-studio",
+    name: "JSON Studio",
+    icon: "{}",
+    description: "Validate, pretty-print, and minify JSON payloads.",
+  },
+  {
+    id: "url-workbench",
+    name: "URL Workbench",
+    icon: "\u2197",
+    description: "Encode/decode URLs and build query strings quickly.",
+  },
+  {
+    id: "hash-generator",
+    name: "Hash Generator",
+    icon: "#",
+    description: "Generate SHA-256 and SHA-1 hashes for text.",
+  },
+];
+
 function parseAppPath(pathname: string): {
   hubTab: HubTab;
   showControlTower: boolean;
   showDevBoard: boolean;
+  showTool: boolean;
+  selectedTool: ToolId;
   controlTowerTab: ControlTowerTab;
 } {
   const clean = pathname.replace(/^\//, "");
@@ -51,26 +78,31 @@ function parseAppPath(pathname: string): {
   if ((segment === "services" && subSegment === "novaryn-control-tower") || segment === "controltower") {
     const tabSegment = segment === "controltower" ? subSegment : thirdSegment;
     const controlTowerTab = (CONTROLTOWER_TABS.find((t) => t.id === tabSegment)?.id ?? "flags") as ControlTowerTab;
-    return { hubTab: "services", showControlTower: true, showDevBoard: false, controlTowerTab };
+    return { hubTab: "services", showControlTower: true, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab };
   }
 
   if (segment === "services" && subSegment === "devboard") {
-    return { hubTab: "services", showControlTower: false, showDevBoard: true, controlTowerTab: "flags" };
+    return { hubTab: "services", showControlTower: false, showDevBoard: true, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
   }
 
-  if (segment === "services") return { hubTab: "services", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "tools") return { hubTab: "tools", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "project") return { hubTab: "projects", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "projects") return { hubTab: "projects", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "products") return { hubTab: "projects", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "community") return { hubTab: "community", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
-  if (segment === "settings") return { hubTab: "settings", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "tools" && subSegment) {
+    const selectedTool = (TOOLS.find((tool) => tool.id === subSegment)?.id ?? "json-studio") as ToolId;
+    return { hubTab: "tools", showControlTower: false, showDevBoard: false, showTool: true, selectedTool, controlTowerTab: "flags" };
+  }
 
-  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "services") return { hubTab: "services", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "tools") return { hubTab: "tools", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "project") return { hubTab: "projects", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "projects") return { hubTab: "projects", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "products") return { hubTab: "projects", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "community") return { hubTab: "community", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+  if (segment === "settings") return { hubTab: "settings", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
 
-  return { hubTab: "home", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
+
+  return { hubTab: "home", showControlTower: false, showDevBoard: false, showTool: false, selectedTool: "json-studio", controlTowerTab: "flags" };
 }
 
 function AppInner() {
@@ -78,15 +110,18 @@ function AppInner() {
   const [hubTab, setHubTabState] = useState<HubTab>(initialState.hubTab);
   const [showControlTower, setShowControlTower] = useState(initialState.showControlTower);
   const [showDevBoard, setShowDevBoard] = useState(initialState.showDevBoard);
+  const [showTool, setShowTool] = useState(initialState.showTool);
+  const [selectedTool, setSelectedTool] = useState<ToolId>(initialState.selectedTool);
   const [controlTowerTab, setControlTowerTabState] = useState<ControlTowerTab>(initialState.controlTowerTab);
   const { projects, selectedProject, setSelectedProject, envsForProject, selectedEnv, setSelectedEnv } = useEnv();
 
   const setHubTab = (next: HubTab) => {
     const path = next === "home" ? "/novaryn" : `/${next}`;
-    window.history.pushState({ hubTab: next, showControlTower: false, showDevBoard: false }, "", path);
+    window.history.pushState({ hubTab: next, showControlTower: false, showDevBoard: false, showTool: false }, "", path);
     setHubTabState(next);
     setShowControlTower(false);
     setShowDevBoard(false);
+    setShowTool(false);
   };
 
   const openControlTower = (next: ControlTowerTab = "flags") => {
@@ -95,6 +130,7 @@ function AppInner() {
     setHubTabState("services");
     setShowControlTower(true);
     setShowDevBoard(false);
+    setShowTool(false);
     setControlTowerTabState(next);
   };
 
@@ -103,6 +139,16 @@ function AppInner() {
     setHubTabState("services");
     setShowControlTower(false);
     setShowDevBoard(true);
+    setShowTool(false);
+  };
+
+  const openTool = (toolId: ToolId) => {
+    window.history.pushState({ hubTab: "tools", showControlTower: false, showDevBoard: false, showTool: true, selectedTool: toolId }, "", `/tools/${toolId}`);
+    setHubTabState("tools");
+    setShowControlTower(false);
+    setShowDevBoard(false);
+    setShowTool(true);
+    setSelectedTool(toolId);
   };
 
   const setControlTowerTab = (next: ControlTowerTab) => {
@@ -117,6 +163,8 @@ function AppInner() {
       setHubTabState(parsed.hubTab);
       setShowControlTower(parsed.showControlTower);
       setShowDevBoard(parsed.showDevBoard);
+      setShowTool(parsed.showTool);
+      setSelectedTool(parsed.selectedTool);
       setControlTowerTabState(parsed.controlTowerTab);
     };
     window.addEventListener("popstate", onPop);
@@ -285,14 +333,45 @@ function AppInner() {
           </div>
         )}
 
-        {hubTab === "tools" && (
+        {hubTab === "tools" && !showTool && (
           <div className="max-w-4xl">
             <h1 className="text-xl font-semibold mb-4">Tools</h1>
-            <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
-              <p className="text-sm text-gray-400">
-                No tools are currently available.
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {TOOLS.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => openTool(tool.id)}
+                  className="border border-cyan-800/70 hover:border-cyan-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg text-cyan-300">{tool.icon}</span>
+                    <span className="font-medium text-sm">{tool.name}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3">{tool.description}</p>
+                  <span className="text-xs text-cyan-400 group-hover:text-cyan-300">Open tool →</span>
+                </button>
+              ))}
             </div>
+          </div>
+        )}
+
+        {hubTab === "tools" && showTool && (
+          <div>
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  window.history.pushState({ hubTab: "tools", showTool: false }, "", "/tools");
+                  setShowTool(false);
+                }}
+                className="text-xs text-gray-400 hover:text-gray-200"
+              >
+                ← Back to tools
+              </button>
+            </div>
+
+            {selectedTool === "json-studio" && <JsonStudioTool />}
+            {selectedTool === "url-workbench" && <UrlWorkbenchTool />}
+            {selectedTool === "hash-generator" && <HashGeneratorTool />}
           </div>
         )}
 
