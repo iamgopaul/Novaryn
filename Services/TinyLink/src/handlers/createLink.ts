@@ -3,6 +3,7 @@ import { createLinkSchema } from "../utils/validate";
 import { generateSlug } from "../utils/slug";
 import { createLink, slugExists } from "../db/queries/links";
 import { requireRequestUserId } from "../utils/requestUser";
+import { resolvePublicBaseUrl } from "../utils/publicBaseUrl";
 
 // Sends a JSON response — avoids repeating Content-Type headers in every return.
 function json(data: unknown, status = 200): Response {
@@ -50,7 +51,7 @@ export async function handleCreateLink(req: Request): Promise<Response> {
   }
 
   const link = await createLink(slug, url, ownerUserId);
-  const shortUrl = `${process.env.BASE_URL}/r/${slug}`;
+  const shortUrl = `${resolvePublicBaseUrl(req)}/r/${slug}`;
 
   return json(
     {

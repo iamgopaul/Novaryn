@@ -1,4 +1,5 @@
 import { errorResponse, jsonResponse } from "./middleware/errorHandler";
+import { getAuthUser } from "./middleware/auth";
 
 function getBearerToken(req: Request): string | null {
   return req.headers.get("authorization")?.replace("Bearer ", "").trim() ?? null;
@@ -64,6 +65,61 @@ function applyCors(req: Request, response: Response): Response {
   });
 }
 
+function getTinyLinkHosts(): string[] {
+  const configured = process.env.TINYLINK_URL?.trim();
+  const isProduction = (process.env.NODE_ENV ?? "development") === "production";
+  const candidates = [
+    configured,
+    ...(!isProduction ? ["http://localhost:3001", "http://localhost:3000"] : []),
+  ].filter((value): value is string => Boolean(value && value.length > 0));
+
+  const unique: string[] = [];
+  for (const host of candidates) {
+    const normalized = host.replace(/\/+$/, "");
+    if (!unique.includes(normalized)) unique.push(normalized);
+  }
+  return unique;
+}
+
+function getTinyLinkPublicPrefix(): string {
+  const configured = process.env.TINYLINK_PUBLIC_PREFIX?.trim();
+  if (!configured) return "";
+  const withLeadingSlash = configured.startsWith("/") ? configured : `/${configured}`;
+  return withLeadingSlash.replace(/\/+$/, "");
+}
+
+function isTinyLinkPublicPath(method: string, tinyLinkPath: string): boolean {
+  return method === "GET" && (tinyLinkPath === "/" || tinyLinkPath.startsWith("/r/"));
+}
+
+function buildTinyLinkRequest(
+  req: Request,
+  tinyLinkUrl: string,
+  options: {
+    forwardedPrefix: string;
+    trustedUserId: string | null;
+    proxyBody?: ArrayBuffer;
+  },
+): Request {
+  const headers = new Headers(req.headers);
+  const sourceUrl = new URL(req.url);
+  headers.delete("host");
+  // Let fetch recalculate Content-Length if body has been transformed.
+  headers.delete("content-length");
+  // Never trust client-provided user scoping. Proxy injects the authenticated user id.
+  headers.delete("x-tinylink-user-id");
+  headers.set("x-forwarded-host", sourceUrl.host);
+  headers.set("x-forwarded-proto", sourceUrl.protocol.replace(":", ""));
+  headers.set("x-forwarded-prefix", options.forwardedPrefix);
+  if (options.trustedUserId) headers.set("x-tinylink-user-id", options.trustedUserId);
+
+  return new Request(tinyLinkUrl, {
+    method: req.method,
+    headers,
+    body: req.method !== "GET" && req.method !== "HEAD" ? options.proxyBody : undefined,
+  });
+}
+
 async function handleRequestInternal(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204 });
@@ -108,28 +164,43 @@ async function handleRequestInternal(req: Request): Promise<Response> {
       return await handleStream(req);
     }
 
-    if (segments[0] === "tools" && segments[1] === "tinylink") {
-      try {
-        const tinyLinkHost = process.env.TINYLINK_URL || "http://localhost:3001";
-        const tinyLinkPath = "/" + segments.slice(2).join("/");
-        const tinyLinkUrl = `${tinyLinkHost}${tinyLinkPath}${url.search}`;
-        
-        console.log(`[TinyLink Proxy] ${req.method} ${tinyLinkUrl}`);
-        
-        const tinyLinkReq = new Request(tinyLinkUrl, {
-          method: req.method,
-          headers: req.headers,
-          body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
-        });
-        
-        const tinyLinkRes = await fetch(tinyLinkReq);
-        console.log(`[TinyLink Proxy] Response: ${tinyLinkRes.status}`);
-        return tinyLinkRes;
-      } catch (err) {
-        console.error("TinyLink proxy error:", err);
-        console.error("Failed to reach TinyLink at", process.env.TINYLINK_URL || "http://localhost:3001");
-        return errorResponse("TinyLink service unavailable", 503);
+    const isTinyLinkToolsRoute = segments[0] === "tools" && segments[1] === "tinylink";
+    const isTinyLinkRedirectRoute = req.method === "GET" && segments[0] === "r";
+    if (isTinyLinkToolsRoute || isTinyLinkRedirectRoute) {
+      const tinyLinkPath = isTinyLinkToolsRoute
+        ? "/" + segments.slice(2).join("/")
+        : path || "/";
+      const tinyLinkHosts = getTinyLinkHosts();
+      let lastError: unknown = null;
+      const requiresAuthUser = !isTinyLinkPublicPath(req.method, tinyLinkPath);
+      const authUser = requiresAuthUser ? await getAuthUser(req) : null;
+      const trustedUserId = authUser?.id ?? null;
+      const proxyBody = req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined;
+      const forwardedPrefix = isTinyLinkToolsRoute ? getTinyLinkPublicPrefix() : "";
+
+      if (tinyLinkHosts.length === 0) {
+        return errorResponse("TinyLink URL is not configured. Set TINYLINK_URL in production.", 503);
       }
+
+      for (const tinyLinkHost of tinyLinkHosts) {
+        const tinyLinkUrl = `${tinyLinkHost}${tinyLinkPath}${url.search}`;
+        try {
+          console.log(`[TinyLink Proxy] ${req.method} ${tinyLinkUrl}`);
+          const tinyLinkRes = await fetch(buildTinyLinkRequest(req, tinyLinkUrl, {
+            forwardedPrefix,
+            trustedUserId,
+            proxyBody,
+          }));
+          console.log(`[TinyLink Proxy] Response: ${tinyLinkRes.status} from ${tinyLinkHost}`);
+          return tinyLinkRes;
+        } catch (err) {
+          lastError = err;
+          console.error(`TinyLink proxy error via ${tinyLinkHost}:`, err);
+        }
+      }
+
+      console.error("Failed to reach TinyLink on all configured hosts", tinyLinkHosts, lastError);
+      return errorResponse("TinyLink service unavailable", 503);
     }
 
     if (segments[0] === "admin") {

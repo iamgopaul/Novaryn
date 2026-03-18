@@ -5,7 +5,7 @@ import { pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
 // Stores each shortened link — one row per unique slug.
 export const links = pgTable("links", {
   id: uuid("id").primaryKey().defaultRandom(),
-  owner_user_id: text("owner_user_id"),
+  owner_user_id: text("owner_user_id").notNull(),
   slug: varchar("slug", { length: 20 }).unique().notNull(), // unique constraint prevents duplicate slugs
   original_url: text("original_url").notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

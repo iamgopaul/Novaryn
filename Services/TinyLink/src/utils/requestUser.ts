@@ -1,11 +1,6 @@
 export function getRequestUserId(req: Request): string | null {
   const headerUserId = req.headers.get("x-tinylink-user-id")?.trim();
   if (headerUserId) return headerUserId;
-
-  const url = new URL(req.url);
-  const queryUserId = url.searchParams.get("userId")?.trim();
-  if (queryUserId) return queryUserId;
-
   return null;
 }
 

@@ -37,6 +37,8 @@ Recommended for website integration:
 - `COOKIE_SAMESITE=None` (cross-site cookies)
 - `COOKIE_SECURE=true` (set in HTTPS environments)
 - `COOKIE_DOMAIN` (optional)
+- `TINYLINK_URL=https://<your-tinylink-service-domain>` (required in production if TinyLink is proxied via `/tools/tinylink/*`)
+- `TINYLINK_PUBLIC_PREFIX` (optional, default empty). Leave empty for short links like `https://novaryn.dev/r/<slug>`, or set `/tools/tinylink` for `https://novaryn.dev/tools/tinylink/r/<slug>`.
 
 Notes:
 

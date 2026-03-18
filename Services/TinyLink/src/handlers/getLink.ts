@@ -2,6 +2,7 @@
 // Does NOT redirect and does NOT log a click.
 import { getUserLinkBySlug } from "../db/queries/links";
 import { getRequestUserId } from "../utils/requestUser";
+import { resolvePublicBaseUrl } from "../utils/publicBaseUrl";
 
 export async function handleGetLink(req: Request, slug: string): Promise<Response> {
   const ownerUserId = getRequestUserId(req);
@@ -18,7 +19,7 @@ export async function handleGetLink(req: Request, slug: string): Promise<Respons
     return new Response("Not Found", { status: 404 });
   }
 
-  const shortUrl = `${process.env.BASE_URL}/r/${link.slug}`;
+  const shortUrl = `${resolvePublicBaseUrl(req)}/r/${link.slug}`;
 
   return new Response(JSON.stringify({
     slug: link.slug,

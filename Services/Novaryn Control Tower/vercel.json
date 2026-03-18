@@ -10,6 +10,7 @@
     { "source": "/auth/:path*", "destination": "/api/auth/:path*" },
     { "source": "/admin/:path*", "destination": "/api/admin/:path*" },
     { "source": "/tools/:path*", "destination": "/api/tools/:path*" },
+    { "source": "/r/:path*", "destination": "/api/r/:path*" },
     { "source": "/evaluate", "destination": "/api/evaluate" },
     { "source": "/stream", "destination": "/api/stream" },
     { "source": "/health", "destination": "/api/health" }
