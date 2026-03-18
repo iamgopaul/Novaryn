@@ -1,6 +1,6 @@
 {
-  "installCommand": "bun install --cwd \"NovarynHub\" && bun install --cwd \"NovarynHub/Services/Novaryn Control Tower\" && bun install --cwd \"NovarynHub/Services/DevBoard\"",
-  "buildCommand": "bun run --cwd \"NovarynHub/Services/Novaryn Control Tower\" bundle:api && bash vercel-build.sh",
+  "installCommand": "bun install",
+  "buildCommand": "bun run bundle:api && bash vercel-build.sh",
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {

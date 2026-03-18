@@ -32,4 +32,10 @@ Set API base URL in `.env`:
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-Then run `Novaryn Control Tower` service from `Services/Novaryn Control Tower` inside `NovarynHub`.
+Then run `Novaryn Control Tower` from this same app using:
+
+```bash
+bun run dev:api
+```
+
+Service source lives in `src/services/NovarynControlTower` and `src/services/DeveloperBoard`.

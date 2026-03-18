@@ -5,15 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "bun run --watch src/services/NovarynControlTower/server.ts",
+    "start:api": "bun run src/services/NovarynControlTower/server.ts",
+    "bundle:api": "bun run scripts/bundle-api.ts",
+    "db:seed": "bun run scripts/seed.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/postgres": "^0.10.0",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.8",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/bun": "latest",
+    "@types/pg": "^8.18.0",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^24.10.1",
@@ -23,6 +34,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "drizzle-kit": "^0.31.9",
     "globals": "^16.5.0",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",

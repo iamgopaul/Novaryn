@@ -7,8 +7,7 @@ dist
 api/_lib
 
 # generated during Vercel build
-api/adapter.mjs
-NovarynHub/Services/*/api/adapter.mjs
+NovarynHub/api/adapter.mjs
 *.tgz
 
 # code coverage

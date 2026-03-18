@@ -1,4 +1,4 @@
-import { runNodeAdapter } from "../NovarynHub/Services/Novaryn Control Tower/api/adapter.mjs";
+import { runNodeAdapter } from "./adapter.mjs";
 
 export const config = { runtime: "nodejs" };
 

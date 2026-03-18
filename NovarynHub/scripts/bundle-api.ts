@@ -1,5 +1,5 @@
 /**
- * Bundle the entire backend into a single api/adapter.mjs file.
+ * Bundle the backend into NovarynHub/api/adapter.mjs.
  * Vercel won't try to compile .mjs files as serverless functions,
  * so the api/ handler files can safely import from ./adapter.mjs.
  */
@@ -7,7 +7,7 @@
 console.log("Bundling backend → api/adapter.mjs…");
 
 const result = await Bun.build({
-  entrypoints: ["src/vercel/nodeAdapter.ts"],
+  entrypoints: ["src/services/NovarynControlTower/vercel/nodeAdapter.ts"],
   outdir: "api",
   target: "node",
   format: "esm",

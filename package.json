@@ -1,0 +1,12 @@
+{
+  "name": "novaryn-root",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --cwd NovarynHub dev",
+    "dev:api": "bun run --cwd NovarynHub dev:api",
+    "dev:all": "bash NovarynHub/dev-all.sh",
+    "bundle:api": "bun run --cwd NovarynHub bundle:api",
+    "build": "bun run --cwd NovarynHub build",
+    "lint": "bun run --cwd NovarynHub lint"
+  }
+}

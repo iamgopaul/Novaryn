@@ -1,4 +1,4 @@
-import { apiUrl } from "../src/http";
+import { apiUrl } from "../http";
 
 export type ToolKey = "json-studio" | "url-workbench" | "hash-generator";
 

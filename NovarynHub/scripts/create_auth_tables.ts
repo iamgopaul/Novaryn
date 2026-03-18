@@ -1,4 +1,4 @@
-import { db } from "../src/db/client";
+import { db } from "../src/services/NovarynControlTower/db/client";
 import { sql } from "drizzle-orm";
 
 const tables = [
