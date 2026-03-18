@@ -15,9 +15,9 @@ import RegisterPage from "./pages/RegisterPage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DevBoardPage from "./pages/DevBoardPage";
-import JsonStudioTool from "./pages/tools/JsonStudioTool";
-import UrlWorkbenchTool from "./pages/tools/UrlWorkbenchTool";
-import HashGeneratorTool from "./pages/tools/HashGeneratorTool";
+import JsonStudioTool from "../Tools/JsonStudioTool";
+import UrlWorkbenchTool from "../Tools/UrlWorkbenchTool";
+import HashGeneratorTool from "../Tools/HashGeneratorTool";
 import { getProfileCustomization, subscribeProfileCustomization, type ThemeId } from "./utils/profileCustomization";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 
