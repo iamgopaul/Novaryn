@@ -23,5 +23,14 @@ export const API_BASE_URL = normalizeApiBaseUrl(rawApiBaseUrl) || (isLocalHost ?
 export function apiUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;
+  if (!API_BASE_URL) return normalizedPath;
+
+  // Some deployments set VITE_API_BASE_URL with a trailing /api segment.
+  // Avoid generating double-prefixed paths like /api/api/services/...
+  if (API_BASE_URL.endsWith("/api") && normalizedPath === "/api") return API_BASE_URL;
+  if (API_BASE_URL.endsWith("/api") && normalizedPath.startsWith("/api/")) {
+    return `${API_BASE_URL}${normalizedPath.slice(4)}`;
+  }
+
+  return `${API_BASE_URL}${normalizedPath}`;
 }
