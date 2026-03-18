@@ -6,7 +6,7 @@
     "dev:api": "bun run --cwd NovarynHub dev:api",
     "dev:all": "bash NovarynHub/dev-all.sh",
     "bundle:api": "bun run --cwd NovarynHub bundle:api",
-    "build": "bun run --cwd NovarynHub build",
+    "build": "bun run --cwd NovarynHub bundle:api && bun run --cwd NovarynHub build && rm -rf dist && cp -R NovarynHub/dist dist",
     "lint": "bun run --cwd NovarynHub lint"
   }
 }
