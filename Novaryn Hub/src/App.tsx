@@ -3,7 +3,6 @@ import { useEnv, envColor } from "./contexts/EnvContext";
 import AuthProvider from "./contexts/AuthProvider";
 import EnvProvider from "./contexts/EnvProvider";
 import { useAuth } from "./contexts/AuthContext";
-import { apiUrl } from "./http";
 import HomePage from "./pages/HomePage";
 import FlagsPage from "./pages/FlagsPage";
 import AuditPage from "./pages/AuditPage";
@@ -20,7 +19,6 @@ import PageErrorBoundary from "./components/PageErrorBoundary";
 
 type HubTab = "home" | "services" | "tools" | "projects" | "team-collab" | "community" | "about-us" | "settings";
 type ControlTowerTab = "flags" | "experiments" | "audit" | "keys" | "settings";
-type ToolId = "tinylink";
 
 const HUB_TABS: { id: HubTab; label: string }[] = [
   { id: "home", label: "Home" },
@@ -40,75 +38,43 @@ const CONTROLTOWER_TABS: { id: ControlTowerTab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
-const TOOLS: { id: ToolId; label: string; icon: string; name: string; description: string }[] = [
-  { 
-    id: "tinylink", 
-    label: "TinyLink",
-    icon: "🔗",
-    name: "TinyLink",
-    description: "Lightweight URL shortener built with Bun + TypeScript, PostgreSQL, and Drizzle ORM.",
-  },
-];
-
-function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boolean; controlTowerTab: ControlTowerTab; showTool: boolean; selectedTool: ToolId } {
+function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boolean; controlTowerTab: ControlTowerTab } {
   const clean = pathname.replace(/^\//, "");
   const [segment, subSegment, thirdSegment] = clean.split("/");
 
   if ((segment === "services" && subSegment === "novaryn-control-tower") || segment === "controltower") {
     const tabSegment = segment === "controltower" ? subSegment : thirdSegment;
     const controlTowerTab = (CONTROLTOWER_TABS.find((t) => t.id === tabSegment)?.id ?? "flags") as ControlTowerTab;
-    return { hubTab: "services", showControlTower: true, controlTowerTab, showTool: false, selectedTool: "tinylink" };
+    return { hubTab: "services", showControlTower: true, controlTowerTab };
   }
 
-  if (segment === "tools" && subSegment) {
-    const toolId = (TOOLS.find((t) => t.id === subSegment)?.id ?? "tinylink") as ToolId;
-    return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags", showTool: true, selectedTool: toolId };
-  }
+  if (segment === "services") return { hubTab: "services", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "tools") return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "project") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "projects") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "products") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "community") return { hubTab: "community", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "settings") return { hubTab: "settings", showControlTower: false, controlTowerTab: "flags" };
 
-  if (segment === "services") return { hubTab: "services", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "tools") return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "project") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "projects") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "products") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "community") return { hubTab: "community", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-  if (segment === "settings") return { hubTab: "settings", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
+  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
 
-  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
-
-  return { hubTab: "home", showControlTower: false, controlTowerTab: "flags", showTool: false, selectedTool: "tinylink" };
+  return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
 }
 
 function AppInner() {
-  const { user } = useAuth();
   const initialState = parseAppPath(window.location.pathname);
   const [hubTab, setHubTabState] = useState<HubTab>(initialState.hubTab);
   const [showControlTower, setShowControlTower] = useState(initialState.showControlTower);
   const [controlTowerTab, setControlTowerTabState] = useState<ControlTowerTab>(initialState.controlTowerTab);
-  const [showTool, setShowTool] = useState(initialState.showTool);
-  const [selectedTool, setSelectedToolState] = useState<ToolId>(initialState.selectedTool);
   const { projects, selectedProject, setSelectedProject, envsForProject, selectedEnv, setSelectedEnv } = useEnv();
-  const [tinyLinkUrl, setTinyLinkUrl] = useState("");
-  const [tinyLinkSlug, setTinyLinkSlug] = useState("");
-  const [tinyLinkLoading, setTinyLinkLoading] = useState(false);
-  const [tinyLinkError, setTinyLinkError] = useState("");
-  const [tinyLinkCreated, setTinyLinkCreated] = useState<{ shortUrl: string; slug: string; originalUrl: string } | null>(null);
 
   const setHubTab = (next: HubTab) => {
     const path = next === "home" ? "/novaryn" : `/${next}`;
-    window.history.pushState({ hubTab: next, showControlTower: false, showTool: false }, "", path);
+    window.history.pushState({ hubTab: next, showControlTower: false }, "", path);
     setHubTabState(next);
     setShowControlTower(false);
-    setShowTool(false);
-  };
-
-  const openTool = (toolId: ToolId = "tinylink") => {
-    const path = `/tools/${toolId}`;
-    window.history.pushState({ hubTab: "tools", showTool: true, selectedTool: toolId }, "", path);
-    setHubTabState("tools");
-    setShowTool(true);
-    setSelectedToolState(toolId);
   };
 
   const openControlTower = (next: ControlTowerTab = "flags") => {
@@ -125,78 +91,16 @@ function AppInner() {
     setControlTowerTabState(next);
   };
 
-  const onLegacyNavigate = (next: "flags" | "experiments" | "audit" | "keys" | "settings") => {
-    if (next === "settings") {
-      setHubTab("settings");
-      return;
-    }
-    openControlTower(next);
-  };
-
   useEffect(() => {
     const onPop = () => {
       const parsed = parseAppPath(window.location.pathname);
       setHubTabState(parsed.hubTab);
       setShowControlTower(parsed.showControlTower);
       setControlTowerTabState(parsed.controlTowerTab);
-      setShowTool(parsed.showTool);
-      setSelectedToolState(parsed.selectedTool);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
-
-  async function createTinyLink(e: React.FormEvent) {
-    e.preventDefault();
-    if (!tinyLinkUrl.trim()) {
-      setTinyLinkError("Enter a URL to shorten.");
-      return;
-    }
-
-    if (!user?.id) {
-      setTinyLinkError("You must be signed in to create TinyLinks.");
-      return;
-    }
-
-    setTinyLinkLoading(true);
-    setTinyLinkError("");
-    setTinyLinkCreated(null);
-
-    try {
-      const res = await fetch(apiUrl("/tools/tinylink/links"), {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-TinyLink-User-Id": user?.id ?? "",
-        },
-        body: JSON.stringify({
-          url: tinyLinkUrl.trim(),
-          slug: tinyLinkSlug.trim() || undefined,
-        }),
-      });
-
-      const data = await res.json() as {
-        slug?: string;
-        shortUrl?: string;
-        originalUrl?: string;
-        error?: string;
-      };
-
-      if (!res.ok) throw new Error(data.error ?? "Failed to create TinyLink");
-      if (!data.slug || !data.shortUrl || !data.originalUrl) throw new Error("TinyLink response was incomplete.");
-
-      setTinyLinkCreated({
-        slug: data.slug,
-        shortUrl: data.shortUrl,
-        originalUrl: data.originalUrl,
-      });
-    } catch (err) {
-      setTinyLinkError((err as Error).message || "Failed to reach TinyLink service.");
-    } finally {
-      setTinyLinkLoading(false);
-    }
-  }
 
   return (
     <div className="app-shell">
@@ -213,7 +117,7 @@ function AppInner() {
         </button>
 
         {/* Hub nav */}
-        <nav className="order-4 sm:order-none w-full sm:w-auto sm:ml-12 sm:mt-1 flex overflow-x-auto">
+        <nav className="order-4 sm:order-none w-full sm:w-auto sm:ml-12 sm:mt-1 flex flex-wrap">
           {HUB_TABS.map((t) => (
             <button
               key={t.id}
@@ -235,7 +139,7 @@ function AppInner() {
 
       {showControlTower && (
         <div className="border-b border-gray-800 px-3 sm:px-6">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2 overflow-x-auto">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2">
             <span className="text-xs text-purple-300 border border-purple-800 bg-purple-900/20 rounded px-2 py-1 whitespace-nowrap">
               Service: Novaryn Control Tower
             </span>
@@ -298,7 +202,7 @@ function AppInner() {
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <PageErrorBoundary>
-        {hubTab === "home" && <HomePage onNavigate={onLegacyNavigate} />}
+        {hubTab === "home" && <HomePage onNavigate={setHubTab} onOpenControlTower={() => openControlTower("flags")} />}
 
         {hubTab === "services" && !showControlTower && (
           <div className="max-w-3xl">
@@ -338,107 +242,13 @@ function AppInner() {
           </div>
         )}
 
-        {hubTab === "tools" && !showTool && (
+        {hubTab === "tools" && (
           <div className="max-w-4xl">
             <h1 className="text-xl font-semibold mb-4">Tools</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {TOOLS.map((tool) => (
-                <button
-                  key={tool.id}
-                  onClick={() => openTool(tool.id)}
-                  className="group text-left border border-cyan-800/50 hover:border-cyan-700 bg-gray-900 hover:bg-gray-850 rounded-lg p-4 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">{tool.icon}</span>
-                    <span className="font-medium text-sm">{tool.name}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                    {tool.description}
-                  </p>
-                  <span className="text-xs text-cyan-400 group-hover:text-cyan-300">Open tool →</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {hubTab === "tools" && showTool && selectedTool === "tinylink" && (
-          <div className="max-w-4xl">
-            <div className="flex items-center gap-3 mb-4">
-              <button
-                onClick={() => {
-                  setShowTool(false);
-                  window.history.pushState({}, "", "/tools");
-                }}
-                className="text-sm text-gray-400 hover:text-gray-300"
-              >
-                ← Back to Tools
-              </button>
-              <h1 className="text-xl font-semibold">TinyLink</h1>
-            </div>
-
-            <div className="border border-cyan-800/70 bg-gray-900 rounded-lg p-4 sm:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">🔗</span>
-                    <h2 className="text-base font-semibold text-cyan-300">TinyLink</h2>
-                    <span className="text-[11px] px-2 py-0.5 rounded border border-cyan-800 bg-cyan-900/30 text-cyan-300">Integrated</span>
-                  </div>
-                  <p className="text-sm text-gray-400 leading-relaxed">
-                    Lightweight URL shortener built with Bun + TypeScript, PostgreSQL, and Drizzle ORM.
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={createTinyLink} className="border border-gray-800 rounded-md p-4 bg-gray-950/40 space-y-3">
-                <p className="text-xs text-gray-500">Create shortlinks in your account</p>
-                <p className="text-[11px] text-cyan-300/80">Links created here are scoped to your account only.</p>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">URL to shorten</label>
-                  <input
-                    value={tinyLinkUrl}
-                    onChange={(event) => setTinyLinkUrl(event.target.value)}
-                    className="input"
-                    placeholder="https://example.com/very/long/url"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Custom slug (optional)</label>
-                  <input
-                    value={tinyLinkSlug}
-                    onChange={(event) => setTinyLinkSlug(event.target.value)}
-                    className="input"
-                    placeholder="my-custom-slug"
-                  />
-                </div>
-
-                {tinyLinkError && <p className="text-xs text-red-400">{tinyLinkError}</p>}
-
-                <button
-                  type="submit"
-                  disabled={tinyLinkLoading}
-                  className="text-xs bg-cyan-700 hover:bg-cyan-600 disabled:opacity-50 text-white px-3 py-2 rounded font-medium"
-                >
-                  {tinyLinkLoading ? "Creating…" : "Create TinyLink"}
-                </button>
-
-                {tinyLinkCreated && (
-                  <div className="mt-2 border border-cyan-800/70 bg-cyan-950/20 rounded px-3 py-2">
-                    <p className="text-xs text-cyan-300 mb-1">Short link created</p>
-                    <a
-                      href={tinyLinkCreated.shortUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-cyan-200 underline break-all"
-                    >
-                      {tinyLinkCreated.shortUrl}
-                    </a>
-                  </div>
-                )}
-              </form>
+            <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+              <p className="text-sm text-gray-400">
+                No tools are currently available.
+              </p>
             </div>
           </div>
         )}

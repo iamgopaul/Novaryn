@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-type Tab = "flags" | "experiments" | "audit" | "keys" | "settings";
-type SubDashboard = "products" | "services" | "features" | "tools";
+type HubTab = "services" | "tools" | "projects" | "team-collab" | "community" | "about-us" | "settings";
 
-export default function HomePage({ onNavigate }: { onNavigate?: (tab: Tab) => void }) {
+export default function HomePage({ onNavigate, onOpenControlTower }: { onNavigate?: (tab: HubTab) => void; onOpenControlTower?: () => void }) {
   const { user } = useAuth();
-  return user ? <Dashboard user={user} onNavigate={onNavigate!} /> : <Landing />;
+  return user ? <Dashboard user={user} onNavigate={onNavigate!} onOpenControlTower={onOpenControlTower} /> : <Landing />;
 }
 
 // ── Public landing ─────────────────────────────────────────────────────────
@@ -190,10 +189,18 @@ if (flags.find(f => f.key === "dark_mode")?.value) {
 
 // ── Authenticated dashboard ────────────────────────────────────────────────
 
-function Dashboard({ user, onNavigate }: { user: { name: string; role: string }; onNavigate: (tab: Tab) => void }) {
+function Dashboard({
+  user,
+  onNavigate,
+  onOpenControlTower,
+}: {
+  user: { name: string; role: string };
+  onNavigate: (tab: HubTab) => void;
+  onOpenControlTower?: () => void;
+}) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const [subDashboard, setSubDashboard] = useState<SubDashboard>("services");
+  const [activeSection, setActiveSection] = useState<HubTab>("services");
 
   return (
     <div className="max-w-3xl">
@@ -208,20 +215,23 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
       </div>
 
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Workspace</h2>
+        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-4">Workspace Tabs</h2>
 
         <div className="flex flex-wrap gap-2 mb-4">
           {([
-            { id: "products", label: "Products" },
             { id: "services", label: "Services" },
-            { id: "features", label: "Features" },
             { id: "tools", label: "Tools" },
-          ] as Array<{ id: SubDashboard; label: string }>).map((item) => (
+            { id: "projects", label: "Projects" },
+            { id: "team-collab", label: "Team Collab" },
+            { id: "community", label: "Community" },
+            { id: "about-us", label: "About Us" },
+            { id: "settings", label: "Settings" },
+          ] as Array<{ id: HubTab; label: string }>).map((item) => (
             <button
               key={item.id}
-              onClick={() => setSubDashboard(item.id)}
+              onClick={() => setActiveSection(item.id)}
               className={`px-3 py-1.5 text-xs rounded border transition-colors ${
-                subDashboard === item.id
+                activeSection === item.id
                   ? "bg-indigo-900/40 border-indigo-700 text-indigo-300"
                   : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200"
               }`}
@@ -231,30 +241,15 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
           ))}
         </div>
 
-        {subDashboard === "products" && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">📦</span>
-                <span className="font-medium text-sm">Product Portfolio</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                Organize product lines and map services, features, and tools to each product.
-              </p>
-              <span className="text-xs text-gray-500">Coming soon</span>
-            </div>
-          </div>
-        )}
-
-        {subDashboard === "services" && (
+        {activeSection === "services" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
-              onClick={() => onNavigate("flags")}
+              onClick={() => onOpenControlTower?.()}
               className="border border-purple-800 hover:border-purple-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">🏁</span>
-                  <span className="font-medium text-sm">Novaryn Control Tower</span>
+                <span className="font-medium text-sm">Novaryn Control Tower</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed mb-3">
                 Feature flags, experiments, audit logs, SDK keys, and environment controls.
@@ -275,75 +270,47 @@ function Dashboard({ user, onNavigate }: { user: { name: string; role: string };
           </div>
         )}
 
-        {subDashboard === "features" && (
+        {activeSection === "tools" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              onClick={() => onNavigate("flags")}
-              className="border border-indigo-800 hover:border-indigo-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">⚑</span>
-                <span className="font-medium text-sm">Feature Flags</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">Create and target runtime flags for controlled rollouts.</p>
-              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Manage flags →</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate("experiments")}
-              className="border border-purple-800 hover:border-purple-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">⚗</span>
-                <span className="font-medium text-sm">Experiments</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">Run A/B tests with weighted variants and deterministic assignment.</p>
-              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open experiments →</span>
-            </button>
+            <div className="sm:col-span-2 border border-gray-800 bg-gray-900 rounded-lg p-4">
+              <p className="text-xs text-gray-500 leading-relaxed">
+                The tools tab mirrors the top navigation and currently has no active tools.
+              </p>
+            </div>
           </div>
         )}
 
-        {subDashboard === "tools" && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              onClick={() => onNavigate("keys")}
-              className="border border-yellow-800 hover:border-yellow-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">⚿</span>
-                <span className="font-medium text-sm">SDK Keys</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">Create project-scoped keys for client and server evaluation calls.</p>
-              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Manage keys →</span>
-            </button>
+        {activeSection === "projects" && (
+          <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <p className="text-xs text-gray-500">Project planning and delivery tracking live under the Projects tab.</p>
+          </div>
+        )}
 
+        {activeSection === "team-collab" && (
+          <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <p className="text-xs text-gray-500">Team updates and shared workflows live under Team Collab.</p>
+          </div>
+        )}
+
+        {activeSection === "community" && (
+          <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <p className="text-xs text-gray-500">Community posts and announcements live under Community.</p>
+          </div>
+        )}
+
+        {activeSection === "about-us" && (
+          <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <p className="text-xs text-gray-500">Company overview and mission live under About Us.</p>
+          </div>
+        )}
+
+        {activeSection === "settings" && (
+          <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
             <button
               onClick={() => onNavigate("settings")}
-              className="border border-gray-700 hover:border-gray-500 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+              className="text-xs text-indigo-400 hover:text-indigo-300"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">⚙</span>
-                <span className="font-medium text-sm">Settings</span>
-              </div>
-              <p className="text-xs text-gray-500 leading-relaxed mb-3">Manage projects, environments, users, invitations, and security options.</p>
-              <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open settings →</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate("audit")}
-              className="sm:col-span-2 border border-gray-800 hover:border-gray-700 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">📋</span>
-                    <span className="font-medium text-sm">Audit Log</span>
-                    <span className="text-xs bg-green-900/30 text-green-400 border border-green-800 px-1.5 py-0.5 rounded">Live</span>
-                  </div>
-                  <p className="text-xs text-gray-500">Track all sensitive changes across flags, rules, experiments, keys, and team actions.</p>
-                </div>
-                <span className="text-xs text-indigo-400 group-hover:text-indigo-300 shrink-0 ml-4">View log →</span>
-              </div>
+              Open Settings →
             </button>
           </div>
         )}
