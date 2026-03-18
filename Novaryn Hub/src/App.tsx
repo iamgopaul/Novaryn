@@ -14,6 +14,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import DevBoardPage from "./pages/DevBoardPage";
 import { getProfileCustomization, subscribeProfileCustomization, type ThemeId } from "./utils/profileCustomization";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 
@@ -38,43 +39,54 @@ const CONTROLTOWER_TABS: { id: ControlTowerTab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
-function parseAppPath(pathname: string): { hubTab: HubTab; showControlTower: boolean; controlTowerTab: ControlTowerTab } {
+function parseAppPath(pathname: string): {
+  hubTab: HubTab;
+  showControlTower: boolean;
+  showDevBoard: boolean;
+  controlTowerTab: ControlTowerTab;
+} {
   const clean = pathname.replace(/^\//, "");
   const [segment, subSegment, thirdSegment] = clean.split("/");
 
   if ((segment === "services" && subSegment === "novaryn-control-tower") || segment === "controltower") {
     const tabSegment = segment === "controltower" ? subSegment : thirdSegment;
     const controlTowerTab = (CONTROLTOWER_TABS.find((t) => t.id === tabSegment)?.id ?? "flags") as ControlTowerTab;
-    return { hubTab: "services", showControlTower: true, controlTowerTab };
+    return { hubTab: "services", showControlTower: true, showDevBoard: false, controlTowerTab };
   }
 
-  if (segment === "services") return { hubTab: "services", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "tools") return { hubTab: "tools", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "project") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "projects") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "products") return { hubTab: "projects", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "community") return { hubTab: "community", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, controlTowerTab: "flags" };
-  if (segment === "settings") return { hubTab: "settings", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "services" && subSegment === "devboard") {
+    return { hubTab: "services", showControlTower: false, showDevBoard: true, controlTowerTab: "flags" };
+  }
 
-  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "services") return { hubTab: "services", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "tools") return { hubTab: "tools", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "project") return { hubTab: "projects", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "projects") return { hubTab: "projects", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "products") return { hubTab: "projects", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "team-collab") return { hubTab: "team-collab", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "community") return { hubTab: "community", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "about-us") return { hubTab: "about-us", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+  if (segment === "settings") return { hubTab: "settings", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
 
-  return { hubTab: "home", showControlTower: false, controlTowerTab: "flags" };
+  if (segment === "" || segment === "novaryn") return { hubTab: "home", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
+
+  return { hubTab: "home", showControlTower: false, showDevBoard: false, controlTowerTab: "flags" };
 }
 
 function AppInner() {
   const initialState = parseAppPath(window.location.pathname);
   const [hubTab, setHubTabState] = useState<HubTab>(initialState.hubTab);
   const [showControlTower, setShowControlTower] = useState(initialState.showControlTower);
+  const [showDevBoard, setShowDevBoard] = useState(initialState.showDevBoard);
   const [controlTowerTab, setControlTowerTabState] = useState<ControlTowerTab>(initialState.controlTowerTab);
   const { projects, selectedProject, setSelectedProject, envsForProject, selectedEnv, setSelectedEnv } = useEnv();
 
   const setHubTab = (next: HubTab) => {
     const path = next === "home" ? "/novaryn" : `/${next}`;
-    window.history.pushState({ hubTab: next, showControlTower: false }, "", path);
+    window.history.pushState({ hubTab: next, showControlTower: false, showDevBoard: false }, "", path);
     setHubTabState(next);
     setShowControlTower(false);
+    setShowDevBoard(false);
   };
 
   const openControlTower = (next: ControlTowerTab = "flags") => {
@@ -82,7 +94,15 @@ function AppInner() {
     window.history.pushState({ hubTab: "services", showControlTower: true, controlTowerTab: next }, "", path);
     setHubTabState("services");
     setShowControlTower(true);
+    setShowDevBoard(false);
     setControlTowerTabState(next);
+  };
+
+  const openDevBoard = () => {
+    window.history.pushState({ hubTab: "services", showControlTower: false, showDevBoard: true }, "", "/services/devboard");
+    setHubTabState("services");
+    setShowControlTower(false);
+    setShowDevBoard(true);
   };
 
   const setControlTowerTab = (next: ControlTowerTab) => {
@@ -96,6 +116,7 @@ function AppInner() {
       const parsed = parseAppPath(window.location.pathname);
       setHubTabState(parsed.hubTab);
       setShowControlTower(parsed.showControlTower);
+      setShowDevBoard(parsed.showDevBoard);
       setControlTowerTabState(parsed.controlTowerTab);
     };
     window.addEventListener("popstate", onPop);
@@ -202,9 +223,15 @@ function AppInner() {
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <PageErrorBoundary>
-        {hubTab === "home" && <HomePage onNavigate={setHubTab} onOpenControlTower={() => openControlTower("flags")} />}
+        {hubTab === "home" && (
+          <HomePage
+            onNavigate={setHubTab}
+            onOpenControlTower={() => openControlTower("flags")}
+            onOpenDevBoard={openDevBoard}
+          />
+        )}
 
-        {hubTab === "services" && !showControlTower && (
+        {hubTab === "services" && !showControlTower && !showDevBoard && (
           <div className="max-w-3xl">
             <h1 className="text-xl font-semibold mb-4">Services</h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -221,6 +248,20 @@ function AppInner() {
                 </p>
                 <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open service →</span>
               </button>
+
+              <button
+                onClick={openDevBoard}
+                className="border border-emerald-800 hover:border-emerald-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">🧱</span>
+                  <span className="font-medium text-sm">Developer Board</span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed mb-3">
+                  Project planning board with SDLC stages, cards, and project summaries.
+                </p>
+                <span className="text-xs text-emerald-400 group-hover:text-emerald-300">Open service →</span>
+              </button>
             </div>
           </div>
         )}
@@ -234,6 +275,8 @@ function AppInner() {
             {controlTowerTab === "settings" && <ControlTowerSettingsPage />}
           </>
         )}
+
+        {hubTab === "services" && showDevBoard && <DevBoardPage />}
 
         {hubTab === "projects" && (
           <div className="max-w-3xl border border-gray-800 bg-gray-900 rounded-lg p-4">

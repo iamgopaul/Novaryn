@@ -3,9 +3,19 @@ import { useAuth } from "../contexts/AuthContext";
 
 type HubTab = "services" | "tools" | "projects" | "team-collab" | "community" | "about-us" | "settings";
 
-export default function HomePage({ onNavigate, onOpenControlTower }: { onNavigate?: (tab: HubTab) => void; onOpenControlTower?: () => void }) {
+export default function HomePage({
+  onNavigate,
+  onOpenControlTower,
+  onOpenDevBoard,
+}: {
+  onNavigate?: (tab: HubTab) => void;
+  onOpenControlTower?: () => void;
+  onOpenDevBoard?: () => void;
+}) {
   const { user } = useAuth();
-  return user ? <Dashboard user={user} onNavigate={onNavigate!} onOpenControlTower={onOpenControlTower} /> : <Landing />;
+  return user
+    ? <Dashboard user={user} onNavigate={onNavigate!} onOpenControlTower={onOpenControlTower} onOpenDevBoard={onOpenDevBoard} />
+    : <Landing />;
 }
 
 // ── Public landing ─────────────────────────────────────────────────────────
@@ -193,10 +203,12 @@ function Dashboard({
   user,
   onNavigate,
   onOpenControlTower,
+  onOpenDevBoard,
 }: {
   user: { name: string; role: string };
   onNavigate: (tab: HubTab) => void;
   onOpenControlTower?: () => void;
+  onOpenDevBoard?: () => void;
 }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -257,16 +269,19 @@ function Dashboard({
               <span className="text-xs text-indigo-400 group-hover:text-indigo-300">Open service →</span>
             </button>
 
-            <div className="border border-gray-800 bg-gray-900 rounded-lg p-4">
+            <button
+              onClick={() => onOpenDevBoard?.()}
+              className="border border-emerald-800 hover:border-emerald-600 bg-gray-900 rounded-lg p-4 text-left transition-colors group"
+            >
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-lg">🧩</span>
-                <span className="font-medium text-sm">Service Catalog</span>
+                <span className="text-lg">🧱</span>
+                <span className="font-medium text-sm">Developer Board</span>
               </div>
               <p className="text-xs text-gray-500 leading-relaxed mb-3">
-                Add more Novaryn services here as your platform evolves.
+                Project planning board with SDLC columns, cards, and delivery summary.
               </p>
-              <span className="text-xs text-gray-500">Coming soon</span>
-            </div>
+              <span className="text-xs text-emerald-400 group-hover:text-emerald-300">Open service →</span>
+            </button>
           </div>
         )}
 

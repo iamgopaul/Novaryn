@@ -1,4 +1,5 @@
 import { errorResponse, jsonResponse } from "./middleware/errorHandler";
+import { getAuthUser } from "./middleware/auth";
 
 function getBearerToken(req: Request): string | null {
   return req.headers.get("authorization")?.replace("Bearer ", "").trim() ?? null;
@@ -64,6 +65,40 @@ function applyCors(req: Request, response: Response): Response {
   });
 }
 
+function getDevBoardHosts(): string[] {
+  const configured = process.env.DEVBOARD_URL?.trim();
+  const isProduction = (process.env.NODE_ENV ?? "development") === "production";
+  const candidates = [
+    configured,
+    ...(!isProduction ? ["http://localhost:3001", "http://localhost:3002"] : []),
+  ].filter((value): value is string => Boolean(value && value.length > 0));
+
+  const unique: string[] = [];
+  for (const host of candidates) {
+    const normalized = host.replace(/\/+$/, "");
+    if (!unique.includes(normalized)) unique.push(normalized);
+  }
+  return unique;
+}
+
+function buildServiceProxyRequest(
+  req: Request,
+  targetUrl: string,
+  options: { userId: string | null; proxyBody?: ArrayBuffer },
+): Request {
+  const headers = new Headers(req.headers);
+  headers.delete("host");
+  headers.delete("content-length");
+  headers.delete("x-devboard-user-id");
+  if (options.userId) headers.set("x-devboard-user-id", options.userId);
+
+  return new Request(targetUrl, {
+    method: req.method,
+    headers,
+    body: req.method !== "GET" && req.method !== "HEAD" ? options.proxyBody : undefined,
+  });
+}
+
 async function handleRequestInternal(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204 });
@@ -106,6 +141,42 @@ async function handleRequestInternal(req: Request): Promise<Response> {
         if (!sdk) return errorResponse("Invalid SDK key", 401);
       }
       return await handleStream(req);
+    }
+
+    if (segments[0] === "services" && segments[1] === "devboard") {
+      const devBoardPath = "/" + segments.slice(2).join("/");
+      const isPublicHome = req.method === "GET" && (devBoardPath === "/" || devBoardPath === "");
+      const authUser = isPublicHome ? null : await getAuthUser(req);
+      if (!isPublicHome && !authUser) {
+        return errorResponse("Unauthorized", 401);
+      }
+
+      const devBoardHosts = getDevBoardHosts();
+      if (devBoardHosts.length === 0) {
+        return errorResponse("DevBoard URL is not configured. Set DEVBOARD_URL in production.", 503);
+      }
+
+      const proxyBody = req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined;
+      let lastError: unknown = null;
+
+      for (const devBoardHost of devBoardHosts) {
+        const devBoardUrl = `${devBoardHost}${devBoardPath}${url.search}`;
+        try {
+          console.log(`[DevBoard Proxy] ${req.method} ${devBoardUrl}`);
+          const devBoardRes = await fetch(buildServiceProxyRequest(req, devBoardUrl, {
+            userId: authUser?.id ?? null,
+            proxyBody,
+          }));
+          console.log(`[DevBoard Proxy] Response: ${devBoardRes.status} from ${devBoardHost}`);
+          return devBoardRes;
+        } catch (err) {
+          lastError = err;
+          console.error(`DevBoard proxy error via ${devBoardHost}:`, err);
+        }
+      }
+
+      console.error("Failed to reach DevBoard on all configured hosts", devBoardHosts, lastError);
+      return errorResponse("DevBoard service unavailable", 503);
     }
 
     if (segments[0] === "admin") {

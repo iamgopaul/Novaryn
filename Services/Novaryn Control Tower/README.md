@@ -37,6 +37,7 @@ Recommended for website integration:
 - `COOKIE_SAMESITE=None` (cross-site cookies)
 - `COOKIE_SECURE=true` (set in HTTPS environments)
 - `COOKIE_DOMAIN` (optional)
+- `DEVBOARD_URL=https://<your-devboard-service-domain>` (required in production when proxying DevBoard through Control Tower)
 
 Notes:
 

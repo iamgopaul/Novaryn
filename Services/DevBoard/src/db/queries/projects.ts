@@ -49,7 +49,21 @@ export async function createProjectWithDefaultBoard(input: {
 }
 
 export async function listProjectsForUser(ownerUserId: string) {
-  const rows = await db.select().from(projects).where(eq(projects.owner_user_id, ownerUserId));
+  const rows = await db
+    .select({
+      id: projects.id,
+      owner_user_id: projects.owner_user_id,
+      name: projects.name,
+      key: projects.key,
+      description: projects.description,
+      created_at: projects.created_at,
+      updated_at: projects.updated_at,
+      board_id: boards.id,
+      board_name: boards.name,
+    })
+    .from(projects)
+    .leftJoin(boards, eq(boards.project_id, projects.id))
+    .where(eq(projects.owner_user_id, ownerUserId));
   return rows;
 }
 
