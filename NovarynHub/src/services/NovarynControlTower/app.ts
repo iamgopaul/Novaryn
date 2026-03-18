@@ -151,14 +151,32 @@ async function handleRequestInternal(req: Request): Promise<Response> {
         return errorResponse("Unauthorized", 401);
       }
 
-      const devBoardHosts = getDevBoardHosts();
-      if (devBoardHosts.length === 0) {
-        return errorResponse("DevBoard URL is not configured. Set DEVBOARD_URL in production.", 503);
+      const proxyBody = req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined;
+      const devBoardHeaders = new Headers(req.headers);
+      devBoardHeaders.delete("host");
+      devBoardHeaders.delete("content-length");
+      devBoardHeaders.delete("x-devboard-user-id");
+      if (authUser?.id) devBoardHeaders.set("x-devboard-user-id", authUser.id);
+
+      // Primary path in monolith mode: call DevBoard router directly in-process.
+      try {
+        const { router: devBoardRouter } = await import("../DeveloperBoard/router");
+        const internalUrl = `http://devboard.internal${devBoardPath}${url.search}`;
+        const internalReq = new Request(internalUrl, {
+          method: req.method,
+          headers: devBoardHeaders,
+          body: req.method !== "GET" && req.method !== "HEAD" ? proxyBody : undefined,
+        });
+        const internalRes = await devBoardRouter(internalReq);
+        console.log(`[DevBoard Internal] ${req.method} ${devBoardPath} -> ${internalRes.status}`);
+        return internalRes;
+      } catch (internalErr) {
+        console.error("DevBoard internal routing failed, trying external hosts:", internalErr);
       }
 
-      const proxyBody = req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined;
+      // Fallback: external proxy mode (for split-service local setups).
+      const devBoardHosts = getDevBoardHosts();
       let lastError: unknown = null;
-
       for (const devBoardHost of devBoardHosts) {
         const devBoardUrl = `${devBoardHost}${devBoardPath}${url.search}`;
         try {
@@ -175,7 +193,7 @@ async function handleRequestInternal(req: Request): Promise<Response> {
         }
       }
 
-      console.error("Failed to reach DevBoard on all configured hosts", devBoardHosts, lastError);
+      console.error("Failed DevBoard internal routing and all configured hosts", devBoardHosts, lastError);
       return errorResponse("DevBoard service unavailable", 503);
     }
 
