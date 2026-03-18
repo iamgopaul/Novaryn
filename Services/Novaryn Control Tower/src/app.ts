@@ -52,7 +52,8 @@ function applyCors(req: Request, response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("Access-Control-Allow-Origin", corsOrigin);
   headers.set("Access-Control-Allow-Credentials", "true");
-  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Must include any custom headers sent by the browser (preflight checks these).
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-TinyLink-User-Id");
   headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   headers.set("Vary", "Origin");
 
