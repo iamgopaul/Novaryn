@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "bun run --watch src/services/NovarynControlTower/server.ts",
-    "start:api": "bun run src/services/NovarynControlTower/server.ts",
+    "dev:api": "bun --env-file ../.env --watch src/services/NovarynControlTower/server.ts",
+    "start:api": "bun --env-file ../.env src/services/NovarynControlTower/server.ts",
     "bundle:api": "bun run scripts/bundle-api.ts",
-    "db:seed": "bun run scripts/seed.ts",
+    "db:seed": "bun --env-file ../.env run scripts/seed.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -25,8 +25,8 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/pg": "^8.18.0",
     "@eslint/js": "^9.39.1",
+    "@types/pg": "^8.18.0",
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
