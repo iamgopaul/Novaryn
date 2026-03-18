@@ -1,4 +1,4 @@
-import { runNodeAdapter } from "../Services/Novaryn Control Tower/src/vercel/nodeAdapter";
+import { runNodeAdapter } from "../Services/Novaryn Control Tower/api/adapter.mjs";
 
 export const config = { runtime: "nodejs" };
 

@@ -7695,6 +7695,7 @@ var init_postgres_js = __esm(() => {
 var exports_schema = {};
 __export(exports_schema, {
   users: () => users,
+  toolRuns: () => toolRuns,
   sessions: () => sessions,
   sdkKeys: () => sdkKeys,
   registrationChallenges: () => registrationChallenges,
@@ -7712,7 +7713,7 @@ __export(exports_schema, {
   authChallenges: () => authChallenges,
   auditLog: () => auditLog
 });
-var tsz, orgs, projects, environments, flags, flagRules, experiments, auditLog, sdkKeys, exposures, users, sessions, orgMembers, invites, passwordResets, projectInvites, authChallenges, registrationChallenges;
+var tsz, orgs, projects, environments, flags, flagRules, experiments, auditLog, sdkKeys, exposures, users, sessions, orgMembers, invites, passwordResets, projectInvites, authChallenges, registrationChallenges, toolRuns;
 var init_schema2 = __esm(() => {
   init_pg_core();
   tsz = { withTimezone: true };
@@ -7793,6 +7794,7 @@ var init_schema2 = __esm(() => {
     phone: text("phone").unique(),
     name: text("name").notNull(),
     passwordHash: text("password_hash").notNull(),
+    avatarUrl: text("avatar_url"),
     twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     twoFactorMethod: text("two_factor_method").notNull().default("either"),
     createdAt: timestamp("created_at", tsz).defaultNow().notNull(),
@@ -7860,6 +7862,14 @@ var init_schema2 = __esm(() => {
     usedAt: timestamp("used_at", tsz),
     createdAt: timestamp("created_at", tsz).defaultNow().notNull()
   });
+  toolRuns = pgTable("tool_runs", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    toolKey: text("tool_key").notNull(),
+    inputText: text("input_text").notNull(),
+    outputText: text("output_text").notNull(),
+    createdAt: timestamp("created_at", tsz).defaultNow().notNull()
+  });
 });
 
 // src/db/client.ts
@@ -7868,7 +7878,7 @@ var init_client = __esm(() => {
   init_postgres_js();
   init_src();
   init_schema2();
-  connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+  connectionString = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED;
   if (!connectionString) {
     console.error("[DB] DATABASE_URL not set");
   }
@@ -7884,7 +7894,7 @@ var init_client = __esm(() => {
         max: 1,
         idle_timeout: false,
         max_lifetime: false,
-        connect_timeout: 10,
+        connect_timeout: 3,
         prepare: false
       });
       console.log("[DB] postgres-js client configured");
@@ -7946,10 +7956,34 @@ async function getSessionUser(req) {
 }
 function makeSessionCookie(token, expiresAt) {
   const expires = expiresAt.toUTCString();
-  return `sid=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Expires=${expires}`;
+  const sameSite = (process.env.COOKIE_SAMESITE ?? "Lax").trim();
+  const explicitSecure = process.env.COOKIE_SECURE;
+  const secure = explicitSecure ? explicitSecure === "true" : sameSite.toLowerCase() === "none" || false;
+  const domain = process.env.COOKIE_DOMAIN?.trim();
+  const parts = [
+    `sid=${encodeURIComponent(token)}`,
+    "Path=/",
+    "HttpOnly",
+    `SameSite=${sameSite}`,
+    `Expires=${expires}`
+  ];
+  if (secure)
+    parts.push("Secure");
+  if (domain)
+    parts.push(`Domain=${domain}`);
+  return parts.join("; ");
 }
 function clearSessionCookie() {
-  return "sid=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+  const sameSite = (process.env.COOKIE_SAMESITE ?? "Lax").trim();
+  const explicitSecure = process.env.COOKIE_SECURE;
+  const secure = explicitSecure ? explicitSecure === "true" : sameSite.toLowerCase() === "none" || false;
+  const domain = process.env.COOKIE_DOMAIN?.trim();
+  const parts = ["sid=", "Path=/", "HttpOnly", `SameSite=${sameSite}`, "Max-Age=0"];
+  if (secure)
+    parts.push("Secure");
+  if (domain)
+    parts.push(`Domain=${domain}`);
+  return parts.join("; ");
 }
 var ROLE_LEVELS;
 var init_session3 = __esm(() => {
@@ -7963,17 +7997,59 @@ var init_session3 = __esm(() => {
 async function getAuthUser(req) {
   const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
   if (ADMIN_API_KEY && bearer === ADMIN_API_KEY) {
-    return {
-      id: "admin",
-      email: "admin",
-      username: null,
-      phone: null,
-      name: "admin",
-      orgId: "admin",
-      role: "owner",
-      twoFactorEnabled: false,
-      twoFactorMethod: "either"
-    };
+    try {
+      const [owner] = await db2.select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        phone: users.phone,
+        name: users.name,
+        orgId: orgMembers.orgId,
+        role: orgMembers.role,
+        twoFactorEnabled: users.twoFactorEnabled,
+        twoFactorMethod: users.twoFactorMethod
+      }).from(users).innerJoin(orgMembers, eq(orgMembers.userId, users.id)).where(eq(orgMembers.role, "owner")).limit(1);
+      if (owner) {
+        return {
+          id: owner.id,
+          email: owner.email,
+          username: owner.username ?? null,
+          phone: owner.phone ?? null,
+          name: owner.name,
+          orgId: owner.orgId,
+          role: owner.role,
+          twoFactorEnabled: owner.twoFactorEnabled ?? false,
+          twoFactorMethod: owner.twoFactorMethod ?? "either"
+        };
+      }
+      const [member] = await db2.select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        phone: users.phone,
+        name: users.name,
+        orgId: orgMembers.orgId,
+        role: orgMembers.role,
+        twoFactorEnabled: users.twoFactorEnabled,
+        twoFactorMethod: users.twoFactorMethod
+      }).from(users).innerJoin(orgMembers, eq(orgMembers.userId, users.id)).limit(1);
+      if (member) {
+        return {
+          id: member.id,
+          email: member.email,
+          username: member.username ?? null,
+          phone: member.phone ?? null,
+          name: member.name,
+          orgId: member.orgId,
+          role: member.role,
+          twoFactorEnabled: member.twoFactorEnabled ?? false,
+          twoFactorMethod: member.twoFactorMethod ?? "either"
+        };
+      }
+    } catch (error) {
+      console.error("Failed to resolve ADMIN_API_KEY user:", error?.message);
+    }
+    return null;
   }
   return getSessionUser(req);
 }
@@ -7996,6 +8072,9 @@ async function requireAuth(req, minRole = "member") {
 var ADMIN_API_KEY;
 var init_auth = __esm(() => {
   init_session3();
+  init_client();
+  init_schema2();
+  init_drizzle_orm();
   ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 });
 
@@ -21931,6 +22010,7 @@ function safeUser(u, role) {
     email: u.email,
     username: u.username ?? null,
     phone: u.phone ?? null,
+    avatarUrl: u.avatarUrl ?? null,
     name: u.name,
     role,
     twoFactorEnabled: u.twoFactorEnabled ?? false,
@@ -21963,6 +22043,12 @@ function maskEmail(email3) {
 function isProduction() {
   return false;
 }
+function registrationResendCooldownSeconds() {
+  const value = Number(process.env.REGISTRATION_RESEND_COOLDOWN_SECONDS ?? 60);
+  if (!Number.isFinite(value) || value < 0)
+    return 60;
+  return Math.floor(value);
+}
 async function sendEmailOtp(to, code, purpose) {
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.OTP_FROM_EMAIL ?? "onboarding@resend.dev";
@@ -21971,7 +22057,8 @@ async function sendEmailOtp(to, code, purpose) {
   const subject = purpose === "login" ? "Your Novaryn login code" : purpose === "recovery" ? "Your Novaryn recovery code" : "Verify your Novaryn email";
   const text3 = purpose === "login" ? `Your Novaryn login code is ${code}. It expires in 10 minutes.` : purpose === "recovery" ? `Your Novaryn recovery code is ${code}. It expires in 10 minutes.` : `Your Novaryn verification code is ${code}. It expires in 10 minutes.`;
   const controller = new AbortController;
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeoutMs = Number(process.env.OTP_EMAIL_TIMEOUT_MS ?? 12000);
+  const timeout = setTimeout(() => controller.abort(), Number.isFinite(timeoutMs) ? timeoutMs : 12000);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -21987,7 +22074,12 @@ async function sendEmailOtp(to, code, purpose) {
       }),
       signal: controller.signal
     });
-    return res.ok;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("sendEmailOtp failed response:", { status: res.status, body });
+      return false;
+    }
+    return true;
   } catch (error48) {
     console.error("sendEmailOtp failed:", error48);
     return false;
@@ -22014,28 +22106,116 @@ async function createChallenge(userId, purpose, channel) {
 async function handleAuth(req, segments) {
   const method = req.method;
   const sub = segments[0] ?? "";
-  if (sub === "register" && method === "POST") {
+  if (sub === "register" && segments[1] === "request" && method === "POST") {
     const body = await req.json().catch(() => null);
     const parsed = RegisterSchema.safeParse(body);
     if (!parsed.success)
       return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
     const normalizedUsername = normalizeUsername(parsed.data.username);
-    const existing = await db2.select({ email: users.email, username: users.username }).from(users).where(or(eq(users.email, parsed.data.email), eq(users.username, normalizedUsername))).limit(2);
-    if (existing.some((u) => u.email === parsed.data.email)) {
+    const existingByEmail = await db2.select({ id: users.id }).from(users).where(eq(users.email, parsed.data.email)).limit(1);
+    if (existingByEmail.length > 0) {
       return errorResponse("Email already in use", 409);
     }
-    if (existing.some((u) => u.username === normalizedUsername)) {
+    const existingByUsername = await db2.select({ id: users.id }).from(users).where(eq(users.username, normalizedUsername)).limit(1);
+    if (existingByUsername.length > 0) {
       return errorResponse("Username already taken", 409);
     }
-    const passwordHash = await hashPassword(parsed.data.password);
-    const [user] = await db2.insert(users).values({
+    const code = randomNumericCode(6);
+    const codeHash = await hashCode(code);
+    const expiresAt = addHours(new Date, 1 / 6);
+    const [challenge] = await db2.insert(registrationChallenges).values({
       email: parsed.data.email,
       username: normalizedUsername,
       name: parsed.data.name,
-      passwordHash
+      passwordHash: await hashPassword(parsed.data.password),
+      codeHash,
+      expiresAt
+    }).returning({ id: registrationChallenges.id });
+    const delivered = await sendEmailOtp(parsed.data.email, code, "register");
+    const destination = maskEmail(parsed.data.email);
+    if (!delivered && isProduction()) {
+      await db2.delete(registrationChallenges).where(eq(registrationChallenges.id, challenge.id));
+      return errorResponse("Could not send verification email. Please try again.", 502);
+    }
+    if (!delivered) {
+      console.log(`[register] ${parsed.data.email} code=${code}`);
+    }
+    return jsonResponse({
+      challengeId: challenge.id,
+      destination,
+      resendCooldownSeconds: registrationResendCooldownSeconds(),
+      ...!isProduction() ? { devCode: code } : {}
+    }, 201);
+  }
+  if (sub === "register" && segments[1] === "resend" && method === "POST") {
+    const body = await req.json().catch(() => null);
+    const parsed = RegisterResendSchema.safeParse(body);
+    if (!parsed.success)
+      return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+    const [challenge] = await db2.select().from(registrationChallenges).where(and(eq(registrationChallenges.id, parsed.data.challengeId), isNull(registrationChallenges.usedAt), gt(registrationChallenges.expiresAt, new Date))).limit(1);
+    if (!challenge)
+      return errorResponse("Registration challenge not found or expired", 404);
+    const cooldownSeconds = registrationResendCooldownSeconds();
+    const elapsedSeconds = Math.floor((Date.now() - new Date(challenge.createdAt).getTime()) / 1000);
+    const retryAfterSeconds = Math.max(0, cooldownSeconds - elapsedSeconds);
+    if (retryAfterSeconds > 0) {
+      return jsonResponse({ error: `Please wait ${retryAfterSeconds}s before requesting another code.`, retryAfterSeconds }, 429);
+    }
+    const code = randomNumericCode(6);
+    const codeHash = await hashCode(code);
+    const expiresAt = addHours(new Date, 1 / 6);
+    const [newChallenge] = await db2.insert(registrationChallenges).values({
+      email: challenge.email,
+      username: challenge.username,
+      name: challenge.name,
+      passwordHash: challenge.passwordHash,
+      codeHash,
+      expiresAt
+    }).returning({ id: registrationChallenges.id });
+    const delivered = await sendEmailOtp(challenge.email, code, "register");
+    if (!delivered && isProduction()) {
+      await db2.delete(registrationChallenges).where(eq(registrationChallenges.id, newChallenge.id));
+      return errorResponse("Could not send verification email. Please try again.", 502);
+    }
+    await db2.update(registrationChallenges).set({ usedAt: new Date }).where(eq(registrationChallenges.id, challenge.id));
+    if (!delivered) {
+      console.log(`[register] ${challenge.email} code=${code}`);
+    }
+    return jsonResponse({
+      challengeId: newChallenge.id,
+      destination: maskEmail(challenge.email),
+      resendCooldownSeconds: cooldownSeconds,
+      ...!isProduction() ? { devCode: code } : {}
+    }, 200);
+  }
+  if ((sub === "register" && segments[1] === "confirm" || sub === "register-confirm") && method === "POST") {
+    const body = await req.json().catch(() => null);
+    const parsed = RegisterConfirmSchema.safeParse(body);
+    if (!parsed.success)
+      return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+    const [challenge] = await db2.select().from(registrationChallenges).where(and(eq(registrationChallenges.id, parsed.data.challengeId), isNull(registrationChallenges.usedAt), gt(registrationChallenges.expiresAt, new Date))).limit(1);
+    if (!challenge)
+      return errorResponse("Registration challenge not found or expired", 404);
+    const codeHash = await hashCode(parsed.data.code);
+    if (codeHash !== challenge.codeHash)
+      return errorResponse("Invalid verification code", 401);
+    const existingByEmail = await db2.select({ id: users.id }).from(users).where(eq(users.email, challenge.email)).limit(1);
+    if (existingByEmail.length > 0) {
+      return errorResponse("Email already in use", 409);
+    }
+    const existingByUsername = await db2.select({ id: users.id }).from(users).where(eq(users.username, challenge.username)).limit(1);
+    if (existingByUsername.length > 0) {
+      return errorResponse("Username already taken", 409);
+    }
+    const [user] = await db2.insert(users).values({
+      email: challenge.email,
+      username: challenge.username,
+      name: challenge.name,
+      passwordHash: challenge.passwordHash
     }).returning();
-    const [personalOrg] = await db2.insert(orgs).values({ name: `${parsed.data.name}'s Workspace` }).returning();
+    const [personalOrg] = await db2.insert(orgs).values({ name: `${challenge.name}'s Workspace` }).returning();
     await db2.insert(orgMembers).values({ orgId: personalOrg.id, userId: user.id, role: "owner" });
+    await db2.update(registrationChallenges).set({ usedAt: new Date }).where(eq(registrationChallenges.id, challenge.id));
     const { token, expiresAt } = await createSession(user.id);
     return new Response(JSON.stringify(safeUser(user, "owner")), {
       status: 201,
@@ -22044,6 +22224,9 @@ async function handleAuth(req, segments) {
         "Set-Cookie": makeSessionCookie(token, expiresAt)
       }
     });
+  }
+  if (sub === "register" && method === "POST") {
+    return errorResponse("Email verification required. Use /auth/register/request first.", 400);
   }
   if (sub === "login" && method === "POST") {
     const body = await req.json().catch(() => null);
@@ -22164,13 +22347,21 @@ async function handleAuth(req, segments) {
       }
     });
   }
-  if (sub === "me" && method === "GET") {
+  if ((sub === "me" || sub === "session") && method === "GET") {
     const user = await getSessionUser(req);
     if (!user) {
       const anyUser = await db2.select({ id: users.id }).from(users).limit(1);
-      return new Response(JSON.stringify({ user: null, needsSetup: anyUser.length === 0 }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return jsonResponse({
+        authenticated: false,
+        user: null,
+        needsSetup: anyUser.length === 0
+      });
     }
-    return jsonResponse({ user, needsSetup: false });
+    return jsonResponse({
+      authenticated: true,
+      user,
+      needsSetup: false
+    });
   }
   if (sub === "invite" && method === "POST") {
     const auth = await requireAuth(req, "admin");
@@ -22441,55 +22632,67 @@ async function handleAuth(req, segments) {
     const auth = await requireAuth(req, "member");
     if (auth instanceof Response)
       return auth;
-    const body = await req.json().catch(() => null);
-    const parsed = UpdateProfileSchema.safeParse(body);
-    if (!parsed.success)
-      return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
-    const [user] = await db2.select().from(users).where(eq(users.id, auth.user.id)).limit(1);
-    if (!user)
-      return errorResponse("User not found", 404);
-    const updates = {};
-    if (parsed.data.username) {
-      const normalizedUsername = normalizeUsername(parsed.data.username);
-      const [existingUsername] = await db2.select({ id: users.id }).from(users).where(eq(users.username, normalizedUsername)).limit(1);
-      if (existingUsername && existingUsername.id !== auth.user.id)
-        return errorResponse("Username already taken", 409);
-      updates.username = normalizedUsername;
-    }
-    if (parsed.data.phone !== undefined) {
-      const normalizedPhone = normalizePhone(parsed.data.phone);
-      const [existingPhone] = await db2.select({ id: users.id }).from(users).where(eq(users.phone, normalizedPhone)).limit(1);
-      if (existingPhone && existingPhone.id !== auth.user.id)
-        return errorResponse("Phone number already in use", 409);
-      updates.phone = normalizedPhone;
-    }
-    if (parsed.data.name)
-      updates.name = parsed.data.name;
-    if (parsed.data.twoFactorMethod)
-      updates.twoFactorMethod = parsed.data.twoFactorMethod;
-    if (parsed.data.twoFactorEnabled !== undefined) {
-      const finalPhone = updates.phone ?? user.phone;
-      const finalMethod = updates.twoFactorMethod ?? user.twoFactorMethod;
-      if (parsed.data.twoFactorEnabled && finalMethod === "phone" && !finalPhone) {
-        return errorResponse("Add a phone number before enabling phone-only 2FA", 400);
+    try {
+      const body = await req.json().catch(() => null);
+      const parsed = UpdateProfileSchema.safeParse(body);
+      if (!parsed.success)
+        return errorResponse(parsed.error.issues[0]?.message ?? "Invalid input");
+      const [user] = await db2.select().from(users).where(eq(users.id, auth.user.id)).limit(1);
+      if (!user)
+        return errorResponse("User not found", 404);
+      const updates = {};
+      if (parsed.data.username) {
+        const normalizedUsername = normalizeUsername(parsed.data.username);
+        const [existingUsername] = await db2.select({ id: users.id }).from(users).where(eq(users.username, normalizedUsername)).limit(1);
+        if (existingUsername && existingUsername.id !== auth.user.id)
+          return errorResponse("Username already taken", 409);
+        updates.username = normalizedUsername;
       }
-      updates.twoFactorEnabled = parsed.data.twoFactorEnabled;
+      if (parsed.data.phone !== undefined) {
+        const normalizedPhone = normalizePhone(parsed.data.phone);
+        const [existingPhone] = await db2.select({ id: users.id }).from(users).where(eq(users.phone, normalizedPhone)).limit(1);
+        if (existingPhone && existingPhone.id !== auth.user.id)
+          return errorResponse("Phone number already in use", 409);
+        updates.phone = normalizedPhone;
+      }
+      if (parsed.data.name)
+        updates.name = parsed.data.name;
+      if (parsed.data.avatarUrl !== undefined) {
+        const urlSize = parsed.data.avatarUrl ? parsed.data.avatarUrl.length : 0;
+        if (urlSize > 1024 * 1024) {
+          return errorResponse("Image too large (max 1MB)", 400);
+        }
+        updates.avatarUrl = parsed.data.avatarUrl || null;
+      }
+      if (parsed.data.twoFactorMethod)
+        updates.twoFactorMethod = parsed.data.twoFactorMethod;
+      if (parsed.data.twoFactorEnabled !== undefined) {
+        const finalPhone = updates.phone ?? user.phone;
+        const finalMethod = updates.twoFactorMethod ?? user.twoFactorMethod;
+        if (parsed.data.twoFactorEnabled && finalMethod === "phone" && !finalPhone) {
+          return errorResponse("Add a phone number before enabling phone-only 2FA", 400);
+        }
+        updates.twoFactorEnabled = parsed.data.twoFactorEnabled;
+      }
+      if (parsed.data.newPassword) {
+        if (!parsed.data.currentPassword)
+          return errorResponse("Current password required");
+        const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
+        if (!valid)
+          return errorResponse("Current password incorrect", 401);
+        updates.passwordHash = await hashPassword(parsed.data.newPassword);
+      }
+      updates.updatedAt = new Date;
+      await db2.update(users).set(updates).where(eq(users.id, user.id));
+      return jsonResponse({ ok: true });
+    } catch (err) {
+      console.error("PATCH /auth/profile error:", err);
+      return errorResponse(`Server error: ${err instanceof Error ? err.message : "Unknown error"}`, 500);
     }
-    if (parsed.data.newPassword) {
-      if (!parsed.data.currentPassword)
-        return errorResponse("Current password required");
-      const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
-      if (!valid)
-        return errorResponse("Current password incorrect", 401);
-      updates.passwordHash = await hashPassword(parsed.data.newPassword);
-    }
-    updates.updatedAt = new Date;
-    await db2.update(users).set(updates).where(eq(users.id, user.id));
-    return jsonResponse({ ok: true });
   }
   return errorResponse("Not found", 404);
 }
-var RegisterSchema, RegisterConfirmSchema, LoginSchema, InviteSchema, AcceptInviteSchema, ResetRequestSchema, ResetConfirmSchema, UpdateProfileSchema, TwoFactorSendSchema, TwoFactorVerifySchema, UpdateMemberSchema, SearchUsersSchema, SendProjectInviteSchema;
+var RegisterSchema, RegisterConfirmSchema, RegisterResendSchema, LoginSchema, InviteSchema, AcceptInviteSchema, ResetRequestSchema, ResetConfirmSchema, UpdateProfileSchema, TwoFactorSendSchema, TwoFactorVerifySchema, UpdateMemberSchema, SearchUsersSchema, SendProjectInviteSchema;
 var init_auth2 = __esm(() => {
   init_client();
   init_schema2();
@@ -22507,6 +22710,9 @@ var init_auth2 = __esm(() => {
   RegisterConfirmSchema = exports_external.object({
     challengeId: exports_external.string().uuid(),
     code: exports_external.string().length(6)
+  });
+  RegisterResendSchema = exports_external.object({
+    challengeId: exports_external.string().uuid()
   });
   LoginSchema = exports_external.object({
     identifier: exports_external.string().min(1),
@@ -22538,6 +22744,7 @@ var init_auth2 = __esm(() => {
     twoFactorEnabled: exports_external.boolean().optional(),
     twoFactorMethod: exports_external.enum(["email", "phone", "either"]).optional(),
     name: exports_external.string().min(1).max(100).optional(),
+    avatarUrl: exports_external.string().optional(),
     currentPassword: exports_external.string().optional(),
     newPassword: exports_external.string().min(8).optional()
   });
@@ -22873,6 +23080,73 @@ async function handleStream(req) {
 var subscribers;
 var init_stream = __esm(() => {
   subscribers = new Map;
+});
+
+// src/routes/tools.ts
+var exports_tools = {};
+__export(exports_tools, {
+  handleTools: () => handleTools
+});
+function parseLimit(url2) {
+  const raw = Number(url2.searchParams.get("limit") ?? 10);
+  if (!Number.isFinite(raw))
+    return 10;
+  return Math.max(1, Math.min(50, Math.floor(raw)));
+}
+async function handleTools(req, segments) {
+  if (segments[0] !== "runs")
+    return errorResponse("Not found", 404);
+  const auth = await requireAuth(req, "member");
+  if (auth instanceof Response)
+    return auth;
+  if (req.method === "GET") {
+    const url2 = new URL(req.url);
+    const limit = parseLimit(url2);
+    const toolKey = url2.searchParams.get("toolKey");
+    const whereClause = toolKey ? and(eq(toolRuns.userId, auth.user.id), eq(toolRuns.toolKey, toolKey)) : eq(toolRuns.userId, auth.user.id);
+    const rows = await db2.select({
+      id: toolRuns.id,
+      toolKey: toolRuns.toolKey,
+      inputText: toolRuns.inputText,
+      outputText: toolRuns.outputText,
+      createdAt: toolRuns.createdAt
+    }).from(toolRuns).where(whereClause).orderBy(desc(toolRuns.createdAt)).limit(limit);
+    return jsonResponse(rows);
+  }
+  if (req.method === "POST") {
+    const body = await req.json().catch(() => null);
+    const parsed = CreateToolRunSchema.safeParse(body);
+    if (!parsed.success)
+      return errorResponse(parsed.error.issues[0]?.message ?? "Invalid tool run payload", 400);
+    const [row] = await db2.insert(toolRuns).values({
+      userId: auth.user.id,
+      toolKey: parsed.data.toolKey,
+      inputText: parsed.data.inputText,
+      outputText: parsed.data.outputText
+    }).returning({
+      id: toolRuns.id,
+      toolKey: toolRuns.toolKey,
+      inputText: toolRuns.inputText,
+      outputText: toolRuns.outputText,
+      createdAt: toolRuns.createdAt
+    });
+    return jsonResponse(row, 201);
+  }
+  return errorResponse("Method not allowed", 405);
+}
+var ToolKeySchema, CreateToolRunSchema;
+var init_tools = __esm(() => {
+  init_drizzle_orm();
+  init_zod();
+  init_client();
+  init_schema2();
+  init_auth();
+  ToolKeySchema = exports_external.enum(["json-studio", "url-workbench", "hash-generator"]);
+  CreateToolRunSchema = exports_external.object({
+    toolKey: ToolKeySchema,
+    inputText: exports_external.string().max(20000),
+    outputText: exports_external.string().max(50000)
+  });
 });
 
 // src/routes/flags.ts
@@ -23283,7 +23557,84 @@ __export(exports_app, {
 function getBearerToken(req) {
   return req.headers.get("authorization")?.replace("Bearer ", "").trim() ?? null;
 }
-async function handleRequest(req) {
+function getAllowedOrigins() {
+  const raw = process.env.CORS_ORIGINS ?? process.env.FRONTEND_ORIGIN ?? "";
+  return raw.split(",").map((x) => x.trim()).filter(Boolean);
+}
+function resolveCorsOrigin(req) {
+  const origin = req.headers.get("origin");
+  if (!origin)
+    return null;
+  const isProduction2 = false;
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname;
+    const isLocalHost = host === "localhost" || host === "127.0.0.1";
+    if (!isProduction2 && isLocalHost) {
+      return origin;
+    }
+    const allowedOrigins = getAllowedOrigins();
+    if (allowedOrigins.length > 0) {
+      return allowedOrigins.includes(origin) ? origin : null;
+    }
+    if (!isProduction2) {
+      return origin;
+    }
+    const isNovarynWeb = host === "novaryn.dev" || host.endsWith(".novaryn.dev");
+    const isPreview = host.endsWith(".vercel.app") && host.includes("novaryn");
+    return isNovarynWeb || isPreview ? origin : null;
+  } catch {
+    return null;
+  }
+}
+function applyCors(req, response) {
+  const corsOrigin = resolveCorsOrigin(req);
+  if (!corsOrigin)
+    return response;
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", corsOrigin);
+  headers.set("Access-Control-Allow-Credentials", "true");
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  headers.set("Vary", "Origin");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+function getDevBoardHosts() {
+  const configured = process.env.DEVBOARD_URL?.trim();
+  const isProduction2 = false;
+  const candidates = [
+    configured,
+    ...!isProduction2 ? ["http://localhost:3001", "http://localhost:3002"] : []
+  ].filter((value) => Boolean(value && value.length > 0));
+  const unique2 = [];
+  for (const host of candidates) {
+    const normalized = host.replace(/\/+$/, "");
+    if (!unique2.includes(normalized))
+      unique2.push(normalized);
+  }
+  return unique2;
+}
+function buildServiceProxyRequest(req, targetUrl, options) {
+  const headers = new Headers(req.headers);
+  headers.delete("host");
+  headers.delete("content-length");
+  headers.delete("x-devboard-user-id");
+  if (options.userId)
+    headers.set("x-devboard-user-id", options.userId);
+  return new Request(targetUrl, {
+    method: req.method,
+    headers,
+    body: req.method !== "GET" && req.method !== "HEAD" ? options.proxyBody : undefined
+  });
+}
+async function handleRequestInternal(req) {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204 });
+  }
   const url2 = new URL(req.url);
   const path = url2.pathname.replace(/\/$/, "");
   const segments = path.split("/").filter(Boolean);
@@ -23319,6 +23670,41 @@ async function handleRequest(req) {
       }
       return await handleStream2(req);
     }
+    if (segments[0] === "services" && segments[1] === "devboard") {
+      const devBoardPath = "/" + segments.slice(2).join("/");
+      const isPublicHome = req.method === "GET" && (devBoardPath === "/" || devBoardPath === "");
+      const authUser = isPublicHome ? null : await getAuthUser(req);
+      if (!isPublicHome && !authUser) {
+        return errorResponse("Unauthorized", 401);
+      }
+      const devBoardHosts = getDevBoardHosts();
+      if (devBoardHosts.length === 0) {
+        return errorResponse("DevBoard URL is not configured. Set DEVBOARD_URL in production.", 503);
+      }
+      const proxyBody = req.method !== "GET" && req.method !== "HEAD" ? await req.arrayBuffer() : undefined;
+      let lastError = null;
+      for (const devBoardHost of devBoardHosts) {
+        const devBoardUrl = `${devBoardHost}${devBoardPath}${url2.search}`;
+        try {
+          console.log(`[DevBoard Proxy] ${req.method} ${devBoardUrl}`);
+          const devBoardRes = await fetch(buildServiceProxyRequest(req, devBoardUrl, {
+            userId: authUser?.id ?? null,
+            proxyBody
+          }));
+          console.log(`[DevBoard Proxy] Response: ${devBoardRes.status} from ${devBoardHost}`);
+          return devBoardRes;
+        } catch (err) {
+          lastError = err;
+          console.error(`DevBoard proxy error via ${devBoardHost}:`, err);
+        }
+      }
+      console.error("Failed to reach DevBoard on all configured hosts", devBoardHosts, lastError);
+      return errorResponse("DevBoard service unavailable", 503);
+    }
+    if (segments[0] === "tools") {
+      const { handleTools: handleTools2 } = await Promise.resolve().then(() => (init_tools(), exports_tools));
+      return await handleTools2(req, segments.slice(1));
+    }
     if (segments[0] === "admin") {
       const { handleFlags: handleFlags2 } = await Promise.resolve().then(() => (init_flags(), exports_flags));
       const { handleExperiments: handleExperiments2 } = await Promise.resolve().then(() => (init_experiments(), exports_experiments));
@@ -23350,7 +23736,13 @@ async function handleRequest(req) {
     return errorResponse("Internal server error", 500);
   }
 }
-var init_app = () => {};
+async function handleRequest(req) {
+  const response = await handleRequestInternal(req);
+  return applyCors(req, response);
+}
+var init_app = __esm(() => {
+  init_auth();
+});
 
 // src/vercel/nodeAdapter.ts
 async function runNodeAdapter(req, res) {
