@@ -2,7 +2,7 @@
 set -euo pipefail
 
 FRONTEND_DIR=""
-for d in "." "Novaryn Hub" "../Novaryn Hub" "../../Novaryn Hub"; do
+for d in "." "NovarynHub" "../NovarynHub" "../../NovarynHub"; do
   if [[ -f "$d/vite.config.ts" && -f "$d/package.json" ]]; then
     FRONTEND_DIR="$d"
     break

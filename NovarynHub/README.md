@@ -2,7 +2,7 @@
 
 React + Vite frontend for Novaryn.
 
-Deployment target: Vercel (Novaryn Hub project).
+Deployment target: Vercel (NovarynHub project).
 
 ## Local development
 
@@ -32,4 +32,4 @@ Set API base URL in `.env`:
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-Then run `Novaryn Control Tower` service from `Services/Novaryn Control Tower` inside `Novaryn Hub`.
+Then run `Novaryn Control Tower` service from `Services/Novaryn Control Tower` inside `NovarynHub`.

@@ -5,7 +5,10 @@ node_modules
 out
 dist
 api/_lib
-api/adapter.mjs  # generated during Vercel build
+
+# generated during Vercel build
+api/adapter.mjs
+NovarynHub/Services/*/api/adapter.mjs
 *.tgz
 
 # code coverage
